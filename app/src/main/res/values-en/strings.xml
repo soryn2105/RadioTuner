@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RadioTuner</string>
+
+    <string name="search_placeholder">Search for a station…</string>
+    <string name="tab_found">FOUND (%1$d)</string>
+    <string name="tab_favorites">FAVORITES (%1$d)</string>
+    <string name="empty_no_results">No stations found.</string>
+    <string name="empty_no_favorites">No favorite stations yet.</string>
+
+    <string name="status_online">ONLINE</string>
+    <string name="status_offline">OFFLINE</string>
+    <string name="status_on_air">ON AIR</string>
+    <string name="status_buffering">BUFFERING</string>
+    <string name="status_error">ERROR</string>
+    <string name="status_idle">STOPPED</string>
+
+    <string name="no_station_selected">Pick a station</string>
+    <string name="rds_label">RDS</string>
+    <string name="rds_stopped">— NO METADATA —</string>
+
+    <string name="menu_title">Radio stations</string>
+    <string name="menu_open">Open menu</string>
+    <string name="menu_close">Close menu</string>
+
+    <string name="language_picker_title">Choose language</string>
+    <string name="language_romanian">Romanian</string>
+    <string name="language_english">English</string>
+    <string name="language_french">French</string>
+    <string name="language_system">Phone language</string>
+    <string name="action_close">Close</string>
+</resources>

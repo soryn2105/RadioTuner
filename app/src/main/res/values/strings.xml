@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">RadioTuner</string>
+    <string name="menu_title">Menu</string>
+    <string name="menu_close">Close menu</string>
+    <string name="menu_open">Open menu</string>
+    <string name="language_picker_title">Select Language</string>
+    <string name="status_online">Online</string>
+    <string name="status_offline">Offline</string>
+    <string name="status_on_air">On Air</string>
+    <string name="status_buffering">Buffering…</string>
+    <string name="status_error">Error</string>
+    <string name="status_idle">Idle</string>
+    <string name="no_station_selected">No station selected</string>
+    <string name="stringsearch_placeholder">Search stations…</string>
+    <string name="tab_found">Found (%1$d)</string>
+    <string name="tab_favorites">Favorites (%1$d)</string>
+    <string name="empty_no_results">No stations found.</string>
+    <string name="empty_no_favorites">No favorites yet.</string>
+    <string name="language_romaniana">Romanian</string>
+    <string name="language_english">English</string>
+    <string name="language_french">French</string>
+    <string name="language_german">German</string>
+    <string name="language_system">System Default</string>
+    <string name="action_close">Close</string>
+    <string name="rds_label">RDS:</string>
+    <string name="rds_stopped">Stopped</string>
+</resources>
