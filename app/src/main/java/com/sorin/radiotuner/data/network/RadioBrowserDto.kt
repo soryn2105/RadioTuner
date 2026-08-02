@@ -20,7 +20,8 @@ class RadioBrowserStationDto (
     @SerializedName("tags") val tags: String?,
     @SerializedName("country") val country: String?,
     @SerializedName("favicon") val favicon: String?,
-    @SerializedName("bitrate") val bitrate: Int?
+    @SerializedName("bitrate") val bitrate: Int?,
+    @SerializedName("homepage") val homepage: String?
 )
 
 /**

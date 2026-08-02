@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Radio
@@ -233,6 +234,7 @@ private fun PlayerPane(
 ) {
     val isPlaying = state.playbackState is PlaybackState.Playing
     val isFavorite = state.currentStation?.let { current -> state.favoriteStations.any { it.id == current.id } } ?: false
+    var showDetails by remember { mutableStateOf(false) }
 
     val statusLabel = when (state.playbackState) {
         is PlaybackState.Playing -> stringResource(R.string.status_on_air)
@@ -261,23 +263,40 @@ private fun PlayerPane(
                 horizontalAlignment = Alignment.Start,
                 modifier = Modifier.weight(1f) // Ensure RDS ticker can fill available width
             ) {
-                Text(
-                    text = state.currentStation?.name ?: stringResource(R.string.no_station_selected),
-                    color = Cream,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (state.currentStation != null) {
-                    Text(
-                        text = "${state.currentStation.genre} · ${state.currentStation.country}",
-                        color = Muted,
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = state.currentStation?.name ?: stringResource(R.string.no_station_selected),
+                            color = Cream,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (state.currentStation != null) {
+                            Text(
+                                text = "${state.currentStation.genre} · ${state.currentStation.country}",
+                                color = Muted,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    if (state.currentStation != null) {
+                        IconButton(onClick = { showDetails = !showDetails }) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = if (showDetails) Amber else Muted
+                            )
+                        }
+                    }
                 }
+
+                Spacer(Modifier.height(8.dp))
+
+                StationDetails(station = state.currentStation ?: return@Column, isVisible = showDetails)
 
                 Spacer(Modifier.height(16.dp))
 
@@ -311,18 +330,45 @@ private fun PlayerPane(
 
             Spacer(Modifier.height(16.dp))
 
-            Text(
-                text = state.currentStation?.name ?: stringResource(R.string.no_station_selected),
-                color = Cream,
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = state.currentStation?.name ?: stringResource(R.string.no_station_selected),
+                        color = Cream,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        maxLines = 2,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    if (state.currentStation != null) {
+                        Text(
+                            text = "${state.currentStation.genre} · ${state.currentStation.country}",
+                            color = Muted,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+                
+                if (state.currentStation != null) {
+                    IconButton(onClick = { showDetails = !showDetails }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = if (showDetails) Amber else Muted
+                        )
+                    }
+                }
+            }
+
             if (state.currentStation != null) {
-                Text(
-                    text = "${state.currentStation.genre} · ${state.currentStation.country}",
-                    color = Muted,
-                    fontSize = 13.sp
-                )
+                Spacer(Modifier.height(12.dp))
+                StationDetails(station = state.currentStation, isVisible = showDetails)
             }
 
             Spacer(Modifier.height(20.dp))

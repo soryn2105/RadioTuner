@@ -126,7 +126,8 @@ class NetworkStationRepository : StationRepository {
             country = country?.takeUnless { it.isBlank() } ?: "—",
             streamUrl = url,
             imageUrl = favicon?.takeUnless { it.isBlank() },
-            bitrate = bitrate?.takeUnless { it == 0 }
+            bitrate = bitrate?.takeUnless { it == 0 },
+            homepage = homepage?.takeUnless { it.isBlank() }
         )
     }
 

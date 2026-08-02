@@ -21,7 +21,8 @@ data class Station(
     val streamUrl: String,
     val isFavorite: Boolean = false,
     val imageUrl: String? = null,
-    val bitrate: Int? = null
+    val bitrate: Int? = null,
+    val homepage: String? = null
 )
 
 /** (RO)
