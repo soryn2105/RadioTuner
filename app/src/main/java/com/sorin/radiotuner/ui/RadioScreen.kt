@@ -79,6 +79,7 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                         currentStationId = state.currentStation?.id,
                         onSelectStation = viewModel::selectStation,
                         onToggleFavorite = viewModel::toggleFavorite,
+                        errorMessage = state.errorMessage,
                         modifier = Modifier.width(330.dp)
                     )
                     PlayerPane(state = state, viewModel = viewModel, modifier = Modifier.weight(1f))
@@ -127,6 +128,7 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                             currentStationId = state.currentStation?.id,
                             onSelectStation = viewModel::selectStation,
                             onToggleFavorite = viewModel::toggleFavorite,
+                            errorMessage = state.errorMessage,
                             modifier = Modifier.weight(1f)
                         )
                     }

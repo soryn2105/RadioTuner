@@ -80,4 +80,30 @@ Two small issues found after reviewing the uploaded, working build:
   project, likely copied one level too deep. Harmless (AAPT doesn't scan nested subfolders), but messy.
   **Fixed**: removed; the real `res/values-en/`, `res/values-fr/`, `res/xml/` at the top level of `res/`
   are untouched and correct.
+- **Bug critic: căutarea nu găsea niciodată niciun post.** Cauza: în
+  `NetworkModule.kt`, adresa serverului API avea o literă greșită —
+  `"del.api.radio-browser.info"` (litera L) în loc de
+  `"de1.api.radio-browser.info"` (cifra 1). Domeniul cu litera L nu
+  există, deci fiecare cerere eșua silențios. **Fixed**, plus am adăugat
+  un header `User-Agent` (Radio Browser API îl recomandă explicit în
+  documentație, fără el unele cereri pot fi respinse).
+- **Erorile de rețea erau invizibile în UI.** `RadioUiState.errorMessage`
+  exista deja, dar nu era afișat nicăieri — o căutare eșuată arăta
+  identic cu "niciun rezultat", fără niciun indiciu. **Fixed**: acum
+  apare un banner roșu cu mesajul erorii, deasupra listelor.
 
+## 8. Descoperire automată de servere + failover
+- **Motivație**: userul a cerut ca aplicația să poată găsi orice post din
+  lume. Clarificare importantă: un singur server Radio Browser are deja
+  toată baza mondială — schimbarea de aici e despre *fiabilitate*, nu
+  despre acoperire.
+- **`RadioBrowserServers.kt` (nou)**: descoperă serverele active via
+  `https://all.api.radio-browser.info/json/servers`, cu listă de rezervă
+  hardcodată dacă discovery-ul eșuează.
+- **`NetworkModule.kt`**: nu mai construiește UN client fix pentru UN
+  server — construiește Retrofit pentru orice host primit ca parametru.
+- **`NetworkStationRepository.kt`**: la căutare, încearcă serverele pe
+  rând (amestecate aleatoriu); dacă unul eșuează, trece automat la
+  următorul (failover), fără să oprească toată căutarea.
+- **`AppContainer.kt`**: actualizat constructorul apelat (semnătura s-a
+  schimbat — `NetworkStationRepository()` fără parametri acum).

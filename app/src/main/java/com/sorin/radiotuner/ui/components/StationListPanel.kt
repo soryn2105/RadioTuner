@@ -43,6 +43,7 @@ fun StationListPanel(
     currentStationId: String?,
     onSelectStation: (Station) -> Unit,
     onToggleFavorite: (Station) -> Unit,
+    errorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     var tab by remember { mutableStateOf(ListTab.FOUND) }
@@ -50,6 +51,22 @@ fun StationListPanel(
 
     Column(modifier = modifier.fillMaxHeight().padding(16.dp)) {
         SearchBar(query = query, onQueryChange = onQueryChange)
+
+        if (errorMessage != null) {
+            Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(androidx.compose.ui.graphics.Color(0xFF3A2420), RoundedCornerShape(8.dp))
+                    .padding(10.dp)
+            ) {
+                Text(
+                    text = "⚠ $errorMessage",
+                    color = androidx.compose.ui.graphics.Color(0xFFFF8A80),
+                    fontSize = 11.sp
+                )
+            }
+        }
 
         Spacer(Modifier.height(10.dp))
 

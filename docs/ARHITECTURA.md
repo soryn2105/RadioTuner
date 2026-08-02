@@ -84,9 +84,12 @@ redare reușită. Așa evităm bucla de reîncercări rapide care ar
 supraîncărca telefonul și streamul.
 
 ## Limitări cunoscute (documentate intenționat)
-- Radio Browser API are mai multe servere-oglindă; folosim unul fix
-  (`de1.api.radio-browser.info`) — pentru robustețe reală, ideal ar fi
-  rezoluție automată prin DNS SRV, lăsată ca îmbunătățire viitoare.
+- ~~Radio Browser API are mai multe servere-oglindă; folosim unul fix~~ —
+  **actualizat**: acum descoperim automat serverele active
+  (`RadioBrowserServers.discover()`) și facem failover între ele dacă
+  unul nu răspunde. Toate serverele au aceeași bază de date mondială —
+  asta nu adaugă mai multe posturi, doar face căutarea rezistentă la
+  căderea unui singur server.
 - Metadata ICY (echivalentul RDS pe internet) nu e garantată de toate
   posturile — quand lipsește, afișăm starea „fără metadate”.
 - Codul din `player/ExoRadioPlayer.kt` pentru citirea ICY e scris corect
@@ -102,3 +105,4 @@ supraîncărca telefonul și streamul.
 | Nume aplicație: "Amber Tuner" | reflectă identitatea vizuală centrală (cadranul amber), se citește natural în RO/EN/FR |
 | Iconiță: vector drawable, nu imagine bitmap | cod, nu fișier binar — consistent cu restul proiectului, scalează perfect la orice rezoluție |
 | DataStore în loc de SharedPreferences | API modern, bazat pe Coroutines/Flow, recomandat de Google |
+| Descoperire automată de servere Radio Browser + failover | rezistență la căderea unui server (chiar bug-ul care a blocat căutarea inițial); toate serverele au aceeași bază mondială, deci nu schimbă ce se găsește, doar cât de fiabil se găsește |
