@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">RadioTuner</string>
+    <string name="app_name">Amber Tuner</string>
 
     <string name="search_placeholder">Rechercher une station…</string>
     <string name="tab_found">TROUVÉES (%1$d)</string>

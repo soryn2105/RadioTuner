@@ -99,4 +99,6 @@ supraîncărca telefonul și streamul.
 | Jetpack Compose în loc de XML | cod declarativ, mai ușor de întreținut |
 | MVVM pe pachete, nu module Gradle | separare reală fără complexitatea configurării multi-modul |
 | Limbă suprascrisă manual, nu doar sistem | cerință explicită: buton de alegere limbă în aplicație |
+| Nume aplicație: "Amber Tuner" | reflectă identitatea vizuală centrală (cadranul amber), se citește natural în RO/EN/FR |
+| Iconiță: vector drawable, nu imagine bitmap | cod, nu fișier binar — consistent cu restul proiectului, scalează perfect la orice rezoluție |
 | DataStore în loc de SharedPreferences | API modern, bazat pe Coroutines/Flow, recomandat de Google |
