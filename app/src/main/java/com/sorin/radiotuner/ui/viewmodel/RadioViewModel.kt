@@ -2,6 +2,7 @@ package com.sorin.radiotuner.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sorin.radiotuner.data.model.CountryOption
 import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.data.repository.FavoritesRepository
 import com.sorin.radiotuner.data.repository.StationRepository
@@ -46,10 +47,14 @@ class RadioViewModel(
     private var reconnectJob: Job? = null
     private var wasPlayingBeforeOffline = false
 
+    /** Câte posturi cerem pe pagină — trebuie să corespundă cu "limit" din RadioBrowserApi.search. */
+    private val pageSize = 50
+
     init {
         observeFavorites()
         observeConnectivity()
         observePlayback()
+        loadCountries()
         search("") // încarcă o listă inițială (populară / implicită)
     }
 
@@ -62,23 +67,99 @@ class RadioViewModel(
         search(newQuery)
     }
 
+    /**
+     * (RO) O căutare nouă (text schimbat SAU țară schimbată) pornește
+     * mereu de la offset 0 și înlocuiește lista — nu o adaugă la cea
+     * veche (aia e treaba lui loadMore()).
+     *
+     * (EN) A new search (changed text OR changed country) always starts
+     * at offset 0 and replaces the list — it doesn't append to the old
+     * one (that's loadMore()'s job).
+     */
     private fun search(query: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSearching = true)
-            val result = stationRepository.search(query)
+            val selectedCountry = _uiState.value.selectedCountry
+            val result = stationRepository.search(
+                query,
+                country = selectedCountry?.name,
+                countryCode = selectedCountry?.code,
+                language = null, // (RO) Se setează automat "romanian" în repository dacă e cazul
+                offset = 0
+            )
             result.onSuccess { stations ->
                 _uiState.value = _uiState.value.copy(
                     foundStations = stations,
                     isSearching = false,
-                    errorMessage = null
+                    errorMessage = null,
+                    canLoadMore = stations.size >= pageSize
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSearching = false,
-                    errorMessage = error.message ?: "Eroare la căutare"
+                    errorMessage = error.message ?: "Eroare la căutare",
+                    canLoadMore = false
                 )
             }
         }
+    }
+
+    /**
+     * (RO) "Încarcă mai multe" — cere următoarea pagină (offset = câte
+     * posturi avem deja) și o ADAUGĂ la lista curentă. Așa înlocuim
+     * limita fixă de rezultate cu ceva controlat de utilizator, nu de
+     * un număr fix în cod.
+     *
+     * (EN) "Load more" — requests the next page (offset = however many
+     * stations we already have) and APPENDS it to the current list. This
+     * is how we replace the fixed result cap with something the user
+     * controls, instead of a fixed number in code.
+     */
+    fun loadMore() {
+        if (_uiState.value.isLoadingMore || !_uiState.value.canLoadMore) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingMore = true)
+            val selectedCountry = _uiState.value.selectedCountry
+            val currentOffset = _uiState.value.foundStations.size
+            val result = stationRepository.search(
+                _uiState.value.query,
+                country = selectedCountry?.name,
+                countryCode = selectedCountry?.code,
+                language = null,
+                offset = currentOffset
+            )
+            result.onSuccess { newStations ->
+                _uiState.value = _uiState.value.copy(
+                    foundStations = _uiState.value.foundStations + newStations,
+                    isLoadingMore = false,
+                    canLoadMore = newStations.size >= pageSize
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoadingMore = false,
+                    errorMessage = error.message ?: "Eroare la încărcarea mai multor posturi"
+                )
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Filtru de țară
+    // ---------------------------------------------------------------
+
+    private fun loadCountries() {
+        viewModelScope.launch {
+            stationRepository.listCountries().onSuccess { countries ->
+                _uiState.value = _uiState.value.copy(countries = countries)
+            }
+            // (RO) Eșec la încărcarea țărilor nu e critic — selectorul
+            // rămâne gol, dar căutarea de bază tot funcționează.
+        }
+    }
+
+    fun onCountrySelected(country: CountryOption?) {
+        _uiState.value = _uiState.value.copy(selectedCountry = country)
+        search(_uiState.value.query)
     }
 
     // ---------------------------------------------------------------

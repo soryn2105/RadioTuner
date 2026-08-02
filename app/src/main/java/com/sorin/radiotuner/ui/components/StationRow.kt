@@ -18,6 +18,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
+import com.sorin.radiotuner.R
 import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.ui.theme.*
 
@@ -48,6 +52,25 @@ fun StationRow(
             .padding(vertical = 9.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // (RO) Logo post (Favicon)
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Graphite800)
+        ) {
+            AsyncImage(
+                model = station.imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                error = painterResource(R.drawable.ic_radio_placeholder),
+                placeholder = painterResource(R.drawable.ic_radio_placeholder),
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = station.name,
@@ -57,13 +80,24 @@ fun StationRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = "${station.genre} · ${station.country}",
-                fontSize = 11.sp,
-                color = Muted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${station.genre} · ${station.country}",
+                    fontSize = 11.sp,
+                    color = Muted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (station.bitrate != null && station.bitrate > 0) {
+                    Text(
+                        text = " · ${station.bitrate}k",
+                        fontSize = 10.sp,
+                        color = Amber.copy(alpha = 0.7f),
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
+            }
         }
         IconButton(onClick = onToggleFavorite, modifier = Modifier.size(28.dp)) {
             Icon(

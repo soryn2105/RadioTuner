@@ -1,5 +1,6 @@
 package com.sorin.radiotuner.ui.viewmodel
 
+import com.sorin.radiotuner.data.model.CountryOption
 import com.sorin.radiotuner.data.model.RdsInfo
 import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.player.PlaybackState
@@ -14,7 +15,6 @@ import com.sorin.radiotuner.player.PlaybackState
  * The UI (Compose) just "reads" this object and automatically redraws
  * when it changes — it doesn't hold its own state scattered across components.
  */
-
 data class RadioUiState(
     val query: String = "",
     val foundStations: List<Station> = emptyList(),
@@ -25,5 +25,10 @@ data class RadioUiState(
     val isOnline: Boolean = true,
     val isSearching: Boolean = false,
     val isMenuOpen: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    // --- filtrare pe țară + paginare ("încarcă mai multe") ---
+    val countries: List<CountryOption> = emptyList(),
+    val selectedCountry: CountryOption? = null,
+    val isLoadingMore: Boolean = false,
+    val canLoadMore: Boolean = false
 )

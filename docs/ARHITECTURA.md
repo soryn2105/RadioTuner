@@ -106,3 +106,4 @@ supraîncărca telefonul și streamul.
 | Iconiță: vector drawable, nu imagine bitmap | cod, nu fișier binar — consistent cu restul proiectului, scalează perfect la orice rezoluție |
 | DataStore în loc de SharedPreferences | API modern, bazat pe Coroutines/Flow, recomandat de Google |
 | Descoperire automată de servere Radio Browser + failover | rezistență la căderea unui server (chiar bug-ul care a blocat căutarea inițial); toate serverele au aceeași bază mondială, deci nu schimbă ce se găsește, doar cât de fiabil se găsește |
+| Paginare ("Încarcă mai multe") în loc de doar creșterea limitei fixe | evită liste uriașe greu de randat și folosirea abuzivă a API-ului gratuit; utilizatorul controlează câte pagini încarcă |

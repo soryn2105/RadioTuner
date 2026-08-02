@@ -41,12 +41,12 @@ object RadioBrowserServers {
 
     private const val DISCOVERY_URL = "https://all.api.radio-browser.info/json/servers"
 
-    /** Listă de rezervă — folosită doar dacă discovery-ul eșuează complet. */
+    /** Listă de rezervă — prioritizată cu serverul de Germania. */
     val FALLBACK = listOf(
         "de1.api.radio-browser.info",
-        "de2.api.radio-browser.info",
         "at1.api.radio-browser.info",
         "nl1.api.radio-browser.info",
+        "de2.api.radio-browser.info",
         "fr1.api.radio-browser.info"
     )
 
@@ -54,12 +54,17 @@ object RadioBrowserServers {
 
     suspend fun discover(): List<String> = withContext(Dispatchers.IO) {
         try {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
             val request = Request.Builder()
                 .url(DISCOVERY_URL)
                 .header("User-Agent", "AmberTuner/1.0 (Android; educational project)")
                 .build()
 
-            OkHttpClient().newCall(request).execute().use { response ->
+            client.newCall(request).execute().use { response ->
                 val body = response.body?.string()
                 if (!response.isSuccessful || body.isNullOrBlank()) return@withContext FALLBACK
 
@@ -67,7 +72,11 @@ object RadioBrowserServers {
                 val servers: List<ServerEntry> = Gson().fromJson(body, type) ?: emptyList()
                 val hosts = servers.mapNotNull { it.name }.filter { it.isNotBlank() }
 
-                hosts.ifEmpty { FALLBACK }
+                // (RO) Prioritizăm serverul de Germania (de1) dacă există în listă, apoi restul.
+                // (EN) Prioritize the Germany server (de1) if it exists in the list, then the rest.
+                val prioritized = hosts.sortedByDescending { it.startsWith("de1") }
+                
+                prioritized.ifEmpty { FALLBACK }
             }
         } catch (e: Exception) {
             // Fără internet, DNS căzut, orice — cădem pe rezervă, nu blocăm căutarea.

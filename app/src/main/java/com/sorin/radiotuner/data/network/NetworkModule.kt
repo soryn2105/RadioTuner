@@ -37,6 +37,8 @@ object NetworkModule {
         OkHttpClient.Builder()
             .addInterceptor(userAgentInterceptor)
             .addInterceptor(logging)
+            .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
             .build()
     }
 

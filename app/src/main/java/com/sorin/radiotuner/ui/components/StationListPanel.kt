@@ -6,15 +6,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sorin.radiotuner.R
+import com.sorin.radiotuner.data.model.CountryOption
 import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.ui.theme.Amber
 import com.sorin.radiotuner.ui.theme.Graphite700
@@ -26,14 +33,13 @@ private enum class ListTab { FOUND, FAVORITE }
 /**
  * (RO)
  * Panoul din stânga (landscape) sau din interiorul sertarului (portret):
- * căutare + cele două liste comutabile. O singură componentă, refolosită
- * în ambele moduri, ca UI-ul să nu diveargă în timp.
+ * căutare + filtru de țară + cele două liste comutabile. O singură
+ * componentă, refolosită în ambele moduri, ca UI-ul să nu diveargă în timp.
  * (EN)
  * The left panel (landscape) or inside the drawer (portrait):
- * search + the two switchable lists. A single component, reused
- * in both ways, so the UI doesn't diverge over time.
+ * search + country filter + the two switchable lists. A single component,
+ * reused in both ways, so the UI doesn't diverge over time.
  */
-
 @Composable
 fun StationListPanel(
     query: String,
@@ -43,14 +49,38 @@ fun StationListPanel(
     currentStationId: String?,
     onSelectStation: (Station) -> Unit,
     onToggleFavorite: (Station) -> Unit,
+    countries: List<CountryOption> = emptyList(),
+    selectedCountry: CountryOption? = null,
+    onCountrySelected: (CountryOption?) -> Unit = {},
+    canLoadMore: Boolean = false,
+    isLoadingMore: Boolean = false,
+    onLoadMore: () -> Unit = {},
     errorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     var tab by remember { mutableStateOf(ListTab.FOUND) }
+    var showCountryDialog by remember { mutableStateOf(false) }
     val favoriteIds = favoriteStations.map { it.id }.toSet()
 
     Column(modifier = modifier.fillMaxHeight().padding(16.dp)) {
         SearchBar(query = query, onQueryChange = onQueryChange)
+
+        Spacer(Modifier.height(8.dp))
+
+        // Filtru de țară — buton care deschide selectorul; arată alegerea curentă.
+        OutlinedButton(
+            onClick = { showCountryDialog = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = selectedCountry?.name ?: "Toate țările",
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
         if (errorMessage != null) {
             Spacer(Modifier.height(8.dp))
@@ -107,8 +137,7 @@ fun StationListPanel(
             }
         } else {
             LazyColumn {
-                items(listToShow, key = { it.id })
-                { station ->
+                items(listToShow, key = { it.id }) { station ->
                     StationRow(
                         station = station,
                         isActive = station.id == currentStationId,
@@ -117,11 +146,44 @@ fun StationListPanel(
                         onToggleFavorite = { onToggleFavorite(station) }
                     )
                 }
+
+                // "Încarcă mai multe" — apare doar la tab-ul GĂSITE, doar
+                // dacă mai există posturi de adus. Înlocuiește limita
+                // fixă de rezultate cu ceva controlat de utilizator.
+                if (tab == ListTab.FOUND && canLoadMore) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            contentAlignment = androidx.compose.ui.Alignment.Center
+                        ) {
+                            if (isLoadingMore) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                OutlinedButton(onClick = onLoadMore) {
+                                    Text("Încarcă mai multe", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
-}
 
+    if (showCountryDialog) {
+        CountryPickerDialog(
+            countries = countries,
+            selectedName = selectedCountry?.name,
+            onDismiss = { showCountryDialog = false },
+            onCountrySelected = { country ->
+                onCountrySelected(country)
+                showCountryDialog = false
+            }
+        )
+    }
+}
 
 @Composable
 private fun TabButton(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {

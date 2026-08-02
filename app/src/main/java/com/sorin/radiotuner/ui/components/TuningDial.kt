@@ -1,50 +1,33 @@
 package com.sorin.radiotuner.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sorin.radiotuner.ui.theme.Amber
-import com.sorin.radiotuner.ui.theme.AmberDim
-import com.sorin.radiotuner.ui.theme.Cream
-import com.sorin.radiotuner.ui.theme.Graphite900
-import com.sorin.radiotuner.ui.theme.Muted
+import coil.compose.AsyncImage
+import com.sorin.radiotuner.ui.theme.*
 
 /**
  * (RO)
- * Cadranul central al playerului — pur decorativ, dar reflectă starea:
- * se rotește și se luminează doar cât timp postul chiar redă.
- * Notă: radio-ul prin internet nu are o frecvență reală de emisie (aia
- * ține de FM), deci afișăm un status text ("ON AIR" / "OFF"), nu o
- * frecvență inventată — ar fi informație falsă.
- * (EN)
- * The central dial of the player — purely decorative, but reflects the state:
- * it rotates and lights up only while the station is playing.
- * Note: radio over the internet does not have a real emission frequency
- * (it's just a guess), so we display a status text ("ON AIR" / "OFF"),
- * not a real frequency — it's misleading information.
+ * Cadranul central al playerului — acum include și logo-ul postului (dacă e disponibil).
+ * Se rotește și se luminează doar cât timp postul chiar redă.
  */
 @Composable
-fun TuningDial(statusLabel: String, isPlaying: Boolean) {
+fun TuningDial(statusLabel: String, isPlaying: Boolean, imageUrl: String? = null) {
     val transition = rememberInfiniteTransition(label = "dial")
     val rotation by transition.animateFloat(
         initialValue = 0f,
@@ -57,6 +40,7 @@ fun TuningDial(statusLabel: String, isPlaying: Boolean) {
         modifier = Modifier.size(168.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Inelul luminos rotativ
         Box(
             modifier = Modifier
                 .size(168.dp)
@@ -69,16 +53,43 @@ fun TuningDial(statusLabel: String, isPlaying: Boolean) {
                     shape = CircleShape
                 )
         )
+        
+        // Fundalul interior
         Box(
             modifier = Modifier
                 .size(132.dp)
                 .background(Graphite900, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(statusLabel, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Cream)
-                }
+            // Logo post (centrat)
+            if (!imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.2f)),
+                    alpha = if (isPlaying) 1f else 0.5f
+                )
+            }
+
+            // Etichetă Status (peste logo, dacă e pornit)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(if (imageUrl != null) Color.Black.copy(alpha = 0.3f) else Color.Transparent, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = statusLabel,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = if (isPlaying) Cream else Muted
+                )
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.sorin.radiotuner.data.repository
 
+import com.sorin.radiotuner.data.model.CountryOption
 import com.sorin.radiotuner.data.model.Station
 
 /**
@@ -16,5 +17,23 @@ import com.sorin.radiotuner.data.model.Station
  *  the UI or the ViewModel.
  */
 interface StationRepository {
-    suspend fun search(query: String): Result<List<Station>>
+    /**
+     * (RO) country = null înseamnă "toate țările", altfel numele exact
+     * al țării (nu un cod). offset = 0 pentru prima pagină de rezultate,
+     * offset = N pentru "încarcă mai multe".
+     *
+     * (EN) country = null means "all countries", otherwise the exact
+     * country name (not a code). offset = 0 for the first page of
+     * results, offset = N for "load more".
+     */
+    suspend fun search(
+        query: String,
+        country: String? = null,
+        countryCode: String? = null,
+        language: String? = null,
+        offset: Int = 0
+    ): Result<List<Station>>
+
+    /** Lista de țări disponibile pentru filtrare, cu numărul de posturi din fiecare. */
+    suspend fun listCountries(): Result<List<CountryOption>>
 }

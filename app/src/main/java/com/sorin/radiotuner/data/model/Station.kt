@@ -19,7 +19,9 @@ data class Station(
     val genre: String,
     val country: String,
     val streamUrl: String,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val imageUrl: String? = null,
+    val bitrate: Int? = null
 )
 
 /** (RO)
@@ -37,4 +39,18 @@ data class Station(
 data class RdsInfo(
     val text: String,
     val isAvailable: Boolean
+)
+/**
+ * (RO)
+ * O țară din care se pot filtra posturile, cu numărul de posturi
+ * disponibile acolo (informativ, afișat lângă nume în selector).
+ *
+ * (EN)
+ * A country stations can be filtered by, with the number of stations
+ * available there (informational, shown next to the name in the picker).
+ */
+data class CountryOption(
+    val name: String,
+    val stationCount: Int,
+    val code: String? = null
 )

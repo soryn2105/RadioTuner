@@ -16,10 +16,10 @@
       </SelectionState>
       <SelectionState runConfigName="main">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-08-02T08:31:31.244576400Z">
+        <DropdownSelection timestamp="2026-08-02T19:41:37.863051Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Wireless" identifier="serviceName=adb-R3CX50GPW6P-7uzNEJ" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\soryn\.android\avd\Samsung_Galaxy_S24.avd" />
             </handle>
           </Target>
         </DropdownSelection>

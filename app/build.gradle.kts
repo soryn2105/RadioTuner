@@ -50,7 +50,9 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.foundation.layout)
-    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.session)
     implementation(libs.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -61,9 +63,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // Streaming audio
-    implementation("androidx.media3:media3-exoplayer:1.4.1")
-    implementation("androidx.media3:media3-common:1.4.1")
+    // Streaming audio (managed via libs.versions.toml)
 
     // Persistență favorite
     implementation("androidx.datastore:datastore-preferences:1.1.1")
@@ -75,6 +75,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.coil.compose)
 
     // Iconițe extinse — Radio, Language, WifiOff, SkipNext/Previous, Stop
     // NU sunt în setul de bază livrat automat cu Material3, e nevoie de

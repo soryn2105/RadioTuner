@@ -4,6 +4,7 @@ import android.content.Context
 import com.sorin.radiotuner.data.local.FavoritesDataStore
 import com.sorin.radiotuner.data.local.LocalFavoritesRepository
 import com.sorin.radiotuner.data.network.NetworkStationRepository
+import com.sorin.radiotuner.data.network.RomanianSpecializedRepository
 import com.sorin.radiotuner.data.repository.FavoritesRepository
 import com.sorin.radiotuner.data.repository.StationRepository
 import com.sorin.radiotuner.player.ExoRadioPlayer
@@ -31,7 +32,7 @@ import com.sorin.radiotuner.util.ConnectivityObserver
 
 class AppContainer (context: Context) {
     val stationRepository: StationRepository by lazy {
-        NetworkStationRepository()
+        RomanianSpecializedRepository()
     }
 
     val favoritesRepository: FavoritesRepository by lazy {

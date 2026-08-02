@@ -18,5 +18,24 @@ class RadioBrowserStationDto (
     @SerializedName("name") val name: String?,
     @SerializedName("url_resolved") val urlResolved: String?,
     @SerializedName("tags") val tags: String?,
-    @SerializedName("country") val country: String?
+    @SerializedName("country") val country: String?,
+    @SerializedName("favicon") val favicon: String?,
+    @SerializedName("bitrate") val bitrate: Int?
+)
+
+/**
+ * (RO)
+ * Structura brută primită de la Radio Browser API (json/countries).
+ * Notă: endpoint-ul întoarce doar "name" și "stationcount" — NU un cod
+ * ISO. Filtrarea se face după numele țării, nu după cod.
+ *
+ * (EN)
+ * Raw structure received from the Radio Browser API (json/countries).
+ * Note: the endpoint only returns "name" and "stationcount" — NOT an
+ * ISO code. Filtering is done by country name, not by code.
+ */
+class RadioBrowserCountryDto(
+    @SerializedName("name") val name: String?,
+    @SerializedName("stationcount") val stationCount: Int?,
+    @SerializedName("iso_3166_1") val countryCode: String?
 )
