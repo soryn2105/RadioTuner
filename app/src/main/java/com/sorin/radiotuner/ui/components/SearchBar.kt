@@ -55,7 +55,7 @@ fun SearchBar(
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text(stringResource(R.string.stringsearch_placeholder)) },
+            placeholder = { Text(stringResource(R.string.search_placeholder)) },
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,

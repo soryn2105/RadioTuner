@@ -182,3 +182,11 @@ Two small issues found after reviewing the uploaded, working build:
     - Enhanced `NetworkStationRepository` to force-refresh the server list if a full failover cycle fails.
     - Sanitized error messages to be user-friendly ("Check internet connection") instead of technical DNS errors.
 - **Details**: Updated `NetworkModule`, `RadioBrowserServers`, and `NetworkStationRepository`.
+
+## 16. Fixed Fatal Lint Errors (Resource Synchronization)
+- **Issue**: Release build failed due to `ExtraTranslation` errors (strings present in translations but missing/mismatched in default locale).
+- **Fix**: 
+    - Renamed `stringsearch_placeholder` to `search_placeholder` in default `strings.xml`.
+    - Renamed `language_romaniana` to `language_romanian` in default `strings.xml`.
+    - Updated code references in `SearchBar.kt` and `LanguagePickerDialog.kt`.
+- **Result**: Successfully verified with `./gradlew app:assembleRelease`.

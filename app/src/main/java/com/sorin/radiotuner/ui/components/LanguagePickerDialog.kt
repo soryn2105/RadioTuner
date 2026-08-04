@@ -42,7 +42,7 @@ fun LanguagePickerDialog(
             Column {
                 AppLanguage.entries.forEach { language ->
                     val label = when (language) {
-                        AppLanguage.ROMANIAN -> stringResource(R.string.language_romaniana)
+                        AppLanguage.ROMANIAN -> stringResource(R.string.language_romanian)
                         AppLanguage.ENGLISH -> stringResource(R.string.language_english)
                         AppLanguage.FRENCH -> stringResource(R.string.language_french)
                         AppLanguage.GERMAN -> stringResource(R.string.language_german)
