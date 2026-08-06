@@ -37,7 +37,7 @@ jobs:
             -H "Authorization: token $GITEA_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"tag_name\": \"${{ github.ref_name }}\", \"name\": \"${{ github.ref_name }}\"}" \
-            "https://git.programe.uk/api/v1/repos/tiky/RadioTuner/releases")
+            "http://gitea:3000/api/v1/repos/tiky/RadioTuner/releases")
           echo "$RESPONSE"
           RELEASE_ID=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
           echo "release_id=$RELEASE_ID" >> "$GITEA_OUTPUT"
@@ -49,4 +49,4 @@ jobs:
           curl -s -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -F "attachment=@app/build/outputs/apk/release/app-release-unsigned-signed.apk;filename=app-release.apk" \
-            "https://git.programe.uk/api/v1/repos/tiky/RadioTuner/releases/${{ steps.create_release.outputs.release_id }}/assets"
+            "https://gitea:3000/api/v1/repos/tiky/RadioTuner/releases/${{ steps.create_release.outputs.release_id }}/assets"
