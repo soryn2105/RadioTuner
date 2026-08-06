@@ -49,4 +49,4 @@ jobs:
           curl -s -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -F "attachment=@app/build/outputs/apk/release/app-release-unsigned-signed.apk;filename=app-release.apk" \
-            "https://gitea:3000/api/v1/repos/tiky/RadioTuner/releases/${{ steps.create_release.outputs.release_id }}/assets"
+            "http://gitea:3000/api/v1/repos/tiky/RadioTuner/releases/${{ steps.create_release.outputs.release_id }}/assets"
