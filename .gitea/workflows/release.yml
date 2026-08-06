@@ -28,21 +28,25 @@ jobs:
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Create Release
+      - name: Create Release via API
         id: create_release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag_name\": \"${{ github.ref_name }}\", \"name\": \"${{ github.ref_name }}\"}" \
+            "https://git.programe.uk/api/v1/repos/tiky/RadioTuner/releases")
+          echo "$RESPONSE"
+          RELEASE_ID=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+          echo "release_id=$RELEASE_ID" >> "$GITEA_OUTPUT"
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+      - name: Upload APK to Release
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/release/app-release-unsigned-signed.apk
-          asset_name: app-release.apk
-          asset_content_type: application/vnd.android.package-archive
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -F "attachment=@app/build/outputs/apk/release/app-release-unsigned-signed.apk;filename=app-release.apk" \
+            "https://git.programe.uk/api/v1/repos/tiky/RadioTuner/releases/${{ steps.create_release.outputs.release_id }}/assets"
