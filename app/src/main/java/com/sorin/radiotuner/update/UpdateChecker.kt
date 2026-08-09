@@ -1,26 +1,32 @@
 package com.sorin.radiotuner.update
 
 import android.content.Context
-import android.content.pm.PackageManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+/**
+ * (RO) Model pentru informațiile despre actualizare returnate de Worker.
+ */
 data class UpdateInfo(
     val version: String,
     val apkUrl: String
 )
 
+/**
+ * (RO)
+ * Verifică dacă există o versiune nouă pe serverul public (Cloudflare Worker).
+ * Worker-ul interoghează Gitea în fundal și returnează versiunea curentă și link-ul de download.
+ */
 object UpdateChecker {
 
     private const val UPDATE_URL =
         "https://app-updates.soryn2105.workers.dev/update?app=radiotuner"
 
     /**
-     * Returnează UpdateInfo dacă există o versiune mai nouă decât cea instalată,
-     * sau null dacă aplicația e deja la zi ori verificarea eșuează.
+     * (RO) Returnează UpdateInfo dacă există o versiune mai nouă, sau null în caz contrar.
      */
     suspend fun check(context: Context): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
@@ -39,20 +45,22 @@ object UpdateChecker {
             val json = JSONObject(body)
             if (json.has("error")) return@withContext null
 
-            val remoteVersion = json.getString("version")
+            val remoteVersion = json.getString("version") // ex: "1.0.7"
             val apkUrl = json.getString("apk_url")
 
-            val currentVersion = context.packageManager
-                .getPackageInfo(context.packageName, 0).versionName
+            // (RO) Obținem versiunea instalată curent
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            val currentVersion = packageInfo.versionName
 
+            // (RO) Comparăm versiunile (textual)
             if (remoteVersion != currentVersion) {
                 UpdateInfo(remoteVersion, apkUrl)
             } else {
                 null
             }
         } catch (e: Exception) {
-            // Fără conexiune, server oprit etc. — eșuăm silențios, nu blocăm aplicația
-            null
+            e.printStackTrace()
+            null // Eșuăm silențios pentru a nu întrerupe experiența utilizatorului
         }
     }
 }

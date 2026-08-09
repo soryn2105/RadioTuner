@@ -191,6 +191,18 @@ Two small issues found after reviewing the uploaded, working build:
     - Updated code references in `SearchBar.kt` and `LanguagePickerDialog.kt`.
 - **Result**: Successfully verified with `./gradlew app:assembleRelease`.
 
+## 19. Public In-App Update System (Cloudflare Worker Proxy)
+- **Motivation**: Gitea is private (behind Cloudflare Access), so clients cannot check for updates or download APKs directly.
+- **Solution**:
+    - Deployed a **Cloudflare Worker** (`app-updates.soryn2105.workers.dev`) as a public proxy.
+    - Worker uses a Service Token to authenticate with Gitea and fetch release data.
+- **App Implementation**:
+    - `UpdateChecker.kt`: Now queries the Worker's `/update` endpoint instead of Gitea.
+    - `UpdateInstaller.kt`: Downloads the APK via the Worker's `/download` route.
+    - `AndroidManifest.xml`: Configured `FileProvider` and added `REQUEST_INSTALL_PACKAGES`.
+    - `file_paths.xml`: Mapped to `external-files-path` for secure APK installation.
+- **Result**: Users are automatically notified of new versions and can install them with one click, even with a private backend.
+
 ## 18. Removed Multi-Language Support
 - **Motivation**: User requested to simplify the app and remove additional language support.
 - **Changes**:

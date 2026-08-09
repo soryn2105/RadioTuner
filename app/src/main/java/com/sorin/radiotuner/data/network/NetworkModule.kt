@@ -51,4 +51,14 @@ object NetworkModule {
             .build()
             .create(RadioBrowserApi::class.java)
     }
+
+    /** (RO) Construiește API-ul pentru Gitea (Updates). */
+    fun provideGiteaUpdateApi(baseUrl: String): GiteaUpdateApi {
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(sharedClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(GiteaUpdateApi::class.java)
+    }
 }

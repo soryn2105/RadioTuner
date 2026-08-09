@@ -40,3 +40,18 @@ class RadioBrowserCountryDto(
     @SerializedName("stationcount") val stationCount: Int?,
     @SerializedName("iso_3166_1") val countryCode: String?
 )
+
+/**
+ * (RO) DTO-uri pentru API-ul Gitea (Releases).
+ */
+data class GiteaReleaseDto(
+    @SerializedName("tag_name") val tagName: String?,
+    @SerializedName("name") val name: String?,
+    @SerializedName("body") val body: String?,
+    @SerializedName("assets") val assets: List<GiteaAssetDto>?
+)
+
+data class GiteaAssetDto(
+    @SerializedName("name") val name: String?,
+    @SerializedName("browser_download_url") val downloadUrl: String?
+)
