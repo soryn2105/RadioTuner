@@ -190,3 +190,22 @@ Two small issues found after reviewing the uploaded, working build:
     - Renamed `language_romaniana` to `language_romanian` in default `strings.xml`.
     - Updated code references in `SearchBar.kt` and `LanguagePickerDialog.kt`.
 - **Result**: Successfully verified with `./gradlew app:assembleRelease`.
+
+## 18. Removed Multi-Language Support
+- **Motivation**: User requested to simplify the app and remove additional language support.
+- **Changes**:
+    - Deleted `values-en` and `values-fr` resource folders.
+    - Removed `LanguageManager.kt` and `LanguagePickerDialog.kt`.
+    - Removed the language selection icon from the top bar in `RadioScreen.kt`.
+    - Cleaned up `AndroidManifest.xml` by removing `android:localeConfig`.
+    - Removed language-related strings from the default `strings.xml`.
+- **Result**: App now only uses the default language (English) and is lighter.
+
+## 17. Detailed Station Information & UI Polishing
+- **Requirement**: Users wanted to see more info like website, stream URL, and bitrate.
+- **Fix**: 
+    - Implemented `StationDetails.kt` component with animated expand/collapse.
+    - Added an "Info" (i) button next to the station name in the player.
+    - Updated `Station` model to include `homepage`.
+    - Enhanced `TuningDial.kt` to display the station's **logo (favicon)** in the center of the rotating dial using the Coil library.
+- **Landscape Layout**: Redesigned the landscape player to a two-column layout (Dial on left, Controls/RDS/Details on right) with vertical scrolling support to prevent UI clipping.

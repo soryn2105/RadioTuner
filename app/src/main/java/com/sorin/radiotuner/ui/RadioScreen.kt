@@ -11,7 +11,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Wifi
@@ -37,8 +36,6 @@ import com.sorin.radiotuner.ui.components.*
 import com.sorin.radiotuner.ui.theme.*
 import com.sorin.radiotuner.ui.viewmodel.RadioViewModel
 import com.sorin.radiotuner.ui.viewmodel.RadioViewModelFactory
-import com.sorin.radiotuner.util.AppLanguage
-import com.sorin.radiotuner.util.LanguageManager
 
 /**
  * (RO)
@@ -62,15 +59,12 @@ fun RadioScreen(factory: RadioViewModelFactory) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    var showLanguageDialog by remember { mutableStateOf(false) }
-
     Box(modifier = Modifier.fillMaxSize().background(Graphite900)) {
         Column(modifier = Modifier.fillMaxSize()) {
             AppHeader(
                 isOnline = state.isOnline,
                 showMenuButton = !isLandscape,
-                onMenuClick = { viewModel.toggleMenu(true) },
-                onLanguageClick = { showLanguageDialog = true }
+                onMenuClick = { viewModel.toggleMenu(true) }
             )
 
             if (isLandscape) {
@@ -162,25 +156,13 @@ fun RadioScreen(factory: RadioViewModelFactory) {
             }
         }
     }
-
-    if (showLanguageDialog) {
-        LanguagePickerDialog(
-            currentTag = LanguageManager.currentLanguageTag(),
-            onDismiss = { showLanguageDialog = false },
-            onLanguageSelected = { language ->
-                LanguageManager.setLanguage(language)
-                showLanguageDialog = false
-            }
-        )
-    }
 }
 
 @Composable
 private fun AppHeader(
     isOnline: Boolean,
     showMenuButton: Boolean,
-    onMenuClick: () -> Unit,
-    onLanguageClick: () -> Unit
+    onMenuClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -206,9 +188,6 @@ private fun AppHeader(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onLanguageClick) {
-                Icon(Icons.Default.Language, contentDescription = stringResource(R.string.language_picker_title), tint = Muted)
-            }
             Icon(
                 imageVector = if (isOnline) Icons.Default.Wifi else Icons.Default.WifiOff,
                 contentDescription = null,

@@ -16,7 +16,7 @@
       </SelectionState>
       <SelectionState runConfigName="main">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-08-02T19:41:37.863051Z">
+        <DropdownSelection timestamp="2026-08-09T07:02:54.271439600Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\soryn\.android\avd\Samsung_Galaxy_S24.avd" />
