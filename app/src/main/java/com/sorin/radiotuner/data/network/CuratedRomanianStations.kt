@@ -9,37 +9,38 @@ import com.sorin.radiotuner.data.model.Station
 object CuratedRomanianStations {
     val STATIONS = listOf(
         Station(
-            id = "curated-prahova-direct",
-            name = "Radio Prahova (Stream Direct)",
+            id = "curated-prahova",
+            name = "Radio Prahova",
             genre = "Top 40 / Pop",
             country = "Romania",
-            streamUrl = "http://ronix-live.rph.ro:8100/;",
-            homepage = "https://www.radioprahova.ro"
+            streamUrl = "https://r2.mediastreaming.ro/listen/rph/radio.mp3",
+            bitrate = 320,
+            homepage = "https://radioprahova.ro"
         ),
         Station(
-            id = "curated-capital-dance-ssl",
+            id = "curated-capital-dance",
             name = "Capital FM Romania Dance",
             genre = "Dance / Club",
             country = "Romania",
-            streamUrl = "https://ssl.omegahost.ro:8020/dance",
+            streamUrl = "https://radio.sonicpanel.ro/8020/stream",
             imageUrl = "https://www.capitalfm.ro/logo.png",
             homepage = "https://www.capitalfm.ro"
         ),
         Station(
-            id = "curated-capital-manele-ssl",
-            name = "Capital FM Romania Manele",
-            genre = "Manele / Populară",
-            country = "Romania",
-            streamUrl = "https://ssl.omegahost.ro:8020/stream",
-            imageUrl = "https://www.capitalfm.ro/logo.png",
-            homepage = "https://www.capitalfm.ro"
-        ),
-        Station(
-            id = "curated-capital-etno-ssl",
+            id = "curated-capital-etno",
             name = "Capital FM Romania Etno",
             genre = "Etno / Petrecere",
             country = "Romania",
             streamUrl = "https://ssl.omegahost.ro:8020/etno",
+            imageUrl = "https://www.capitalfm.ro/logo.png",
+            homepage = "https://www.capitalfm.ro"
+        ),
+        Station(
+            id = "curated-capital-manele",
+            name = "Capital FM Romania Manele",
+            genre = "Manele / Populară",
+            country = "Romania",
+            streamUrl = "https://ssl.omegahost.ro:8020/stream",
             imageUrl = "https://www.capitalfm.ro/logo.png",
             homepage = "https://www.capitalfm.ro"
         ),

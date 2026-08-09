@@ -172,7 +172,7 @@ fun StationListPanel(
                         isFavorite = favoriteIds.contains(station.id),
                         onClick = { onSelectStation(station) },
                         onToggleFavorite = { onToggleFavorite(station) },
-                        onEdit = if (tab == ListTab.FAVORITE) { { onEditStation(station) } } else null
+                        onEdit = if (tab == ListTab.FAVORITE || tab == ListTab.PREMIUM) { { onEditStation(station) } } else null
                     )
                 }
 

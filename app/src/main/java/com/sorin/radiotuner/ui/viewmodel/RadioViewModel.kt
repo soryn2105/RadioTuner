@@ -171,7 +171,17 @@ class RadioViewModel(
     private fun observeFavorites() {
         viewModelScope.launch {
             favoritesRepository.observeFavorites().collectLatest { favorites ->
-                _uiState.value = _uiState.value.copy(favoriteStations = favorites)
+                val baseCurated = stationRepository.getCuratedStations()
+                
+                // (RO) Înlocuim posturile "Premium" cu versiunile lor editate din favorite (dacă există)
+                val effectiveCurated = baseCurated.map { base ->
+                    favorites.find { it.id == base.id } ?: base
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    favoriteStations = favorites,
+                    curatedStations = effectiveCurated
+                )
             }
         }
     }
