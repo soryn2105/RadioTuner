@@ -78,13 +78,18 @@ class RadioViewModel(
      */
     private fun search(query: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSearching = true)
+            _uiState.value = _uiState.value.copy(isSearching = true, errorMessage = null)
+            
+            // (RO) Arătăm utilizatorului că și verificăm posturile
+            // (EN) Show the user that we are also verifying stations
+            _uiState.value = _uiState.value.copy(errorMessage = "Verificăm disponibilitatea posturilor...")
+
             val selectedCountry = _uiState.value.selectedCountry
             val result = stationRepository.search(
                 query,
                 country = selectedCountry?.name,
                 countryCode = selectedCountry?.code,
-                language = null, // (RO) Se setează automat "romanian" în repository dacă e cazul
+                language = null, 
                 offset = 0
             )
             result.onSuccess { stations ->

@@ -230,3 +230,19 @@ Two small issues found after reviewing the uploaded, working build:
 - **Gitea Integration**: 
     - Recommended updating `release.yml` to pass `${{ github.run_number }}` as `versionCode` and `${{ github.ref_name }}` as `versionName`.
     - This ensures every Tag push generates a unique, increasing version.
+
+## 21. About Dialog & Version Display
+- **Requirement**: Add app information (version, developer) to the UI.
+- **Implementation**:
+    - Added an "Info" button to the `AppHeader`.
+    - Created an `AlertDialog` in `RadioScreen.kt` that displays the version name from `BuildConfig.VERSION_NAME`.
+    - Added corresponding string resources in `strings.xml`.
+- **Details**: Users can now easily check the current app version by tapping the info icon in the top bar.
+
+## 22. Enhanced Multi-Source Search & Real-Time Validation
+- **Requirement**: Find all available stations (even if not strictly in the country filter) and show only working ones.
+- **Implementation**:
+    - **Multi-Source Search**: Updated `NetworkStationRepository` to perform parallel queries. When searching for Romania, it now automatically merges results from both the **Country Filter** ("RO") and the **Language Filter** ("romanian").
+    - **Real-Time Validation**: Added a `validateStations` step after searching. The app now pings each stream URL in parallel (with a 2.5s timeout) and filters out any station that doesn't respond with a valid HTTP status.
+    - **UI Feedback**: Added a temporary status message in the search panel: "Verificăm disponibilitatea posturilor..." (Verifying stations availability...).
+- **Result**: Much higher quality station list. Almost 100% of the stations shown will now actually play.

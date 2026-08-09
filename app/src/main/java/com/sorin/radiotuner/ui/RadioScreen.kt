@@ -9,15 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Radio
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material.icons.filled.WifiOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sorin.radiotuner.BuildConfig
 import com.sorin.radiotuner.R
 import com.sorin.radiotuner.player.PlaybackState
 import com.sorin.radiotuner.ui.components.*
@@ -58,12 +52,15 @@ fun RadioScreen(factory: RadioViewModelFactory) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    var showAboutDialog by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize().background(Graphite900)) {
         Column(modifier = Modifier.fillMaxSize()) {
             AppHeader(
                 isOnline = state.isOnline,
                 showMenuButton = !isLandscape,
-                onMenuClick = { viewModel.toggleMenu(true) }
+                onMenuClick = { viewModel.toggleMenu(true) },
+                onAboutClick = { showAboutDialog = true }
             )
 
             if (isLandscape) {
@@ -153,13 +150,33 @@ fun RadioScreen(factory: RadioViewModelFactory) {
             }
         }
     }
+
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            title = { Text(stringResource(R.string.about_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.about_version, BuildConfig.VERSION_NAME))
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.about_developer))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAboutDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun AppHeader(
     isOnline: Boolean,
     showMenuButton: Boolean,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onAboutClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -185,6 +202,9 @@ private fun AppHeader(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onAboutClick) {
+                Icon(Icons.Default.Info, contentDescription = stringResource(R.string.about_title), tint = Muted)
+            }
             Icon(
                 imageVector = if (isOnline) Icons.Default.Wifi else Icons.Default.WifiOff,
                 contentDescription = null,

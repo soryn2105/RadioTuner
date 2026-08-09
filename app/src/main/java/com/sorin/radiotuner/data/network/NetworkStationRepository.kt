@@ -3,27 +3,13 @@ package com.sorin.radiotuner.data.network
 import com.sorin.radiotuner.data.model.CountryOption
 import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.data.repository.StationRepository
+import kotlinx.coroutines.*
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * (RO)
  * Implementarea REALĂ a StationRepository, bazată pe Radio Browser API.
- * RadioViewModel nu știe (și nu trebuie să știe) că aceasta e sursa —
- * el vede doar interfața StationRepository.
- *
- * Nu depinde de UN singur server fix. La prima cerere, descoperă lista
- * de servere active (RadioBrowserServers.discover()) și le amestecă
- * aleatoriu — dacă serverul curent nu răspunde, trece automat la
- * următorul din listă (failover).
- *
- * (EN)
- * The REAL implementation of StationRepository, based on the Radio
- * Browser API. RadioViewModel does not know (and should not know) that
- * this is the source — it only sees the StationRepository interface.
- *
- * Doesn't depend on a single fixed server. On the first request, it
- * discovers the list of active servers (RadioBrowserServers.discover())
- * and shuffles them — if the current server doesn't respond, it moves
- * to the next one automatically (failover).
  */
 class NetworkStationRepository : StationRepository {
 
@@ -40,17 +26,6 @@ class NetworkStationRepository : StationRepository {
         }
     }
 
-    /**
-     * (RO) Rulează [block] pe rând pe fiecare server disponibil, pornind
-     * de la cel curent — dacă unul eșuează, încearcă următorul, fără să
-     * abandoneze cererea imediat. Reține serverul care a funcționat, ca
-     * următoarea cerere să pornească direct de la el.
-     *
-     * (EN) Runs [block] against each available server in turn, starting
-     * from the current one — if one fails, it tries the next, instead of
-     * failing the request immediately. Remembers the server that worked,
-     * so the next request starts from it directly.
-     */
     private suspend fun <T> withFailover(block: suspend (RadioBrowserApi) -> T): Result<T> {
         ensureServers()
         var serverList = servers.ifEmpty { RadioBrowserServers.FALLBACK }
@@ -65,8 +40,6 @@ class NetworkStationRepository : StationRepository {
                 return Result.success(result)
             } catch (e: Exception) {
                 lastError = e
-                // (RO) Dacă am încercat jumătate din listă și tot nu merge, forțăm un refresh la listă
-                // (EN) If we've tried half the list and it's still not working, force a list refresh
                 if (attempt == serverList.size / 2) {
                     ensureServers(forceRefresh = true)
                     serverList = servers.ifEmpty { RadioBrowserServers.FALLBACK }
@@ -74,8 +47,6 @@ class NetworkStationRepository : StationRepository {
             }
         }
         
-        // (RO) În loc să returnăm o eroare tehnică de DNS pentru un server anume (ex. nl1),
-        // returnăm un mesaj mai clar dacă toate au eșuat.
         val message = if (lastError is java.net.UnknownHostException || lastError is java.net.ConnectException) {
             "Probleme de conexiune la serverele Radio Browser. Verifică internetul."
         } else {
@@ -93,13 +64,27 @@ class NetworkStationRepository : StationRepository {
         offset: Int
     ): Result<List<Station>> {
         return withFailover { api ->
-            api.search(
-                name = query, 
-                country = country, 
-                countryCode = countryCode, 
-                language = language,
-                offset = offset
-            ).mapNotNull { it.toStationOrNull() }
+            // (RO) Căutăm în paralel folosind criterii diferite pentru a găsi absolut tot
+            val results = mutableListOf<RadioBrowserStationDto>()
+            
+            // 1. Căutare standard
+            results += api.search(name = query, country = country, countryCode = countryCode, language = language, offset = offset)
+            
+            // 2. Dacă e vorba de România, forțăm o căutare și după limba română (pentru diaspora/acoperire maximă)
+            if (countryCode == "RO" || country?.contains("Romania", ignoreCase = true) == true) {
+                results += api.search(name = query, language = "romanian", offset = offset)
+            }
+
+            val stations = results
+                .distinctBy { it.stationUuid }
+                .mapNotNull { it.toStationOrNull() }
+
+            // (RO) Validăm posturile în paralel (doar pentru prima pagină, pentru a nu încetini UI-ul)
+            if (offset == 0 && stations.isNotEmpty()) {
+                validateStations(stations)
+            } else {
+                stations
+            }
         }
     }
 
@@ -113,9 +98,33 @@ class NetworkStationRepository : StationRepository {
     }
 
     /**
-     * (RO) Ignorăm intrările fără id sau fără URL de stream — nu sunt redabile.
-     * (EN) We ignore entries without an id or without a stream URL — they are not playable.
+     * (RO) Verifică în timp real dacă stream-urile funcționează.
      */
+    private suspend fun validateStations(stations: List<Station>): List<Station> = coroutineScope {
+        stations.map { station ->
+            async(Dispatchers.IO) {
+                if (isStreamReachable(station.streamUrl)) station else null
+            }
+        }.awaitAll().filterNotNull()
+    }
+
+    private fun isStreamReachable(url: String): Boolean {
+        var connection: HttpURLConnection? = null
+        return try {
+            connection = URL(url).openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 2500
+            connection.readTimeout = 2500
+            // Verificăm doar dacă serverul răspunde cu succes
+            val responseCode = connection.responseCode
+            responseCode in 200..399
+        } catch (e: Exception) {
+            false
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
     private fun RadioBrowserStationDto.toStationOrNull(): Station? {
         val id = stationUuid ?: return null
         val url = urlResolved ?: return null
