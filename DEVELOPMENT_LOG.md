@@ -221,3 +221,12 @@ Two small issues found after reviewing the uploaded, working build:
     - Updated `Station` model to include `homepage`.
     - Enhanced `TuningDial.kt` to display the station's **logo (favicon)** in the center of the rotating dial using the Coil library.
 - **Landscape Layout**: Redesigned the landscape player to a two-column layout (Dial on left, Controls/RDS/Details on right) with vertical scrolling support to prevent UI clipping.
+
+## 18. Automated Versioning & Robust Update Prompt
+- **Issue**: App prompted for update even if versions matched. Versioning was manual.
+- **Fix**:
+    - **UpdateChecker.kt**: Replaced simple string comparison with **Semantic Versioning** logic. It now only prompts if the remote version is strictly greater than the local one.
+    - **build.gradle.kts**: Configured `versionCode` and `versionName` to be dynamic. They now accept values passed via Gradle properties (`-PversionCode`, `-PversionName`).
+- **Gitea Integration**: 
+    - Recommended updating `release.yml` to pass `${{ github.run_number }}` as `versionCode` and `${{ github.ref_name }}` as `versionName`.
+    - This ensures every Tag push generates a unique, increasing version.

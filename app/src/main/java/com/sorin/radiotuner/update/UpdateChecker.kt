@@ -45,22 +45,45 @@ object UpdateChecker {
             val json = JSONObject(body)
             if (json.has("error")) return@withContext null
 
-            val remoteVersion = json.getString("version") // ex: "1.0.7"
+            val remoteVersion = json.getString("version").replace("v", "").trim()
             val apkUrl = json.getString("apk_url")
 
             // (RO) Obținem versiunea instalată curent
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            val currentVersion = packageInfo.versionName
+            val currentVersion = (packageInfo.versionName ?: "0.0.0").replace("v", "").trim()
 
-            // (RO) Comparăm versiunile (textual)
-            if (remoteVersion != currentVersion) {
+            // (RO) Comparăm versiunile (sematic) pentru a evita prompt-urile false
+            if (isNewerVersion(remoteVersion, currentVersion)) {
                 UpdateInfo(remoteVersion, apkUrl)
             } else {
                 null
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            null // Eșuăm silențios pentru a nu întrerupe experiența utilizatorului
+            null
         }
+    }
+
+    /**
+     * (RO) Compară două versiuni (ex: "1.1.0" vs "1.0.9").
+     * Returnează true dacă 'remote' este mai mare decât 'local'.
+     */
+    private fun isNewerVersion(remote: String, local: String): Boolean {
+        if (remote == local) return false
+        
+        val remoteParts = remote.split(".").mapNotNull { it.toIntOrNull() }
+        val localParts = local.split(".").mapNotNull { it.toIntOrNull() }
+        
+        val maxLength = maxOf(remoteParts.size, localParts.size)
+        
+        for (i in 0 until maxLength) {
+            val r = remoteParts.getOrElse(i) { 0 }
+            val l = localParts.getOrElse(i) { 0 }
+            
+            if (r > l) return true
+            if (r < l) return false
+        }
+        
+        return false
     }
 }

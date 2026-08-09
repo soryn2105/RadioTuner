@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -89,7 +88,6 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                     PlayerPane(
                         state = state,
                         viewModel = viewModel,
-                        isLandscape = true,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -97,7 +95,6 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                 PlayerPane(
                     state = state,
                     viewModel = viewModel,
-                    isLandscape = false,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -208,8 +205,7 @@ private fun AppHeader(
 private fun PlayerPane(
     state: com.sorin.radiotuner.ui.viewmodel.RadioUiState,
     viewModel: RadioViewModel,
-    modifier: Modifier,
-    isLandscape: Boolean
+    modifier: Modifier
 ) {
     val isPlaying = state.playbackState is PlaybackState.Playing
     val isFavorite = state.currentStation?.let { current -> state.favoriteStations.any { it.id == current.id } } ?: false
@@ -222,148 +218,75 @@ private fun PlayerPane(
         else -> stringResource(R.string.status_idle)
     }
 
-    if (isLandscape) {
+    Column(
+        modifier = modifier
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        TuningDial(
+            statusLabel = statusLabel,
+            isPlaying = isPlaying,
+            imageUrl = state.currentStation?.imageUrl
+        )
+
+        Spacer(Modifier.height(16.dp))
+
         Row(
-            modifier = modifier
-                .padding(horizontal = 24.dp, vertical = 12.dp)
-                .verticalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            modifier = Modifier.padding(horizontal = 8.dp)
         ) {
-            TuningDial(
-                statusLabel = statusLabel,
-                isPlaying = isPlaying,
-                imageUrl = state.currentStation?.imageUrl
-            )
-
-            Spacer(Modifier.width(32.dp))
-
             Column(
-                horizontalAlignment = Alignment.Start,
-                modifier = Modifier.weight(1f) // Ensure RDS ticker can fill available width
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = state.currentStation?.name ?: stringResource(R.string.no_station_selected),
-                            color = Cream,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (state.currentStation != null) {
-                            Text(
-                                text = "${state.currentStation.genre} · ${state.currentStation.country}",
-                                color = Muted,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                    if (state.currentStation != null) {
-                        IconButton(onClick = { showDetails = !showDetails }) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = if (showDetails) Amber else Muted
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                StationDetails(station = state.currentStation ?: return@Column, isVisible = showDetails)
-
-                Spacer(Modifier.height(16.dp))
-
-                PlayerControls(
-                    playbackState = state.playbackState,
-                    isFavorite = isFavorite,
-                    onPrevious = viewModel::skipToPrevious,
-                    onPlayStop = viewModel::togglePlayStop,
-                    onNext = viewModel::skipToNext,
-                    onToggleFavorite = { state.currentStation?.let(viewModel::toggleFavorite) }
+                Text(
+                    text = state.currentStation?.name ?: stringResource(R.string.no_station_selected),
+                    color = Cream,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    maxLines = 2,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
-
-                Spacer(Modifier.height(16.dp))
-
-                RdsTicker(text = state.rdsInfo?.text, isAvailable = state.rdsInfo?.isAvailable == true)
-            }
-        }
-    } else {
-        Column(
-            modifier = modifier
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            TuningDial(
-                statusLabel = statusLabel,
-                isPlaying = isPlaying,
-                imageUrl = state.currentStation?.imageUrl
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = state.currentStation?.name ?: stringResource(R.string.no_station_selected),
-                        color = Cream,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
-                        maxLines = 2,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    if (state.currentStation != null) {
-                        Text(
-                            text = "${state.currentStation.genre} · ${state.currentStation.country}",
-                            color = Muted,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-                
                 if (state.currentStation != null) {
-                    IconButton(onClick = { showDetails = !showDetails }) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Info",
-                            tint = if (showDetails) Amber else Muted
-                        )
-                    }
+                    Text(
+                        text = "${state.currentStation.genre} · ${state.currentStation.country}",
+                        color = Muted,
+                        fontSize = 13.sp
+                    )
                 }
             }
-
+            
             if (state.currentStation != null) {
-                Spacer(Modifier.height(12.dp))
-                StationDetails(station = state.currentStation, isVisible = showDetails)
+                IconButton(onClick = { showDetails = !showDetails }) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Info",
+                        tint = if (showDetails) Amber else Muted
+                    )
+                }
             }
-
-            Spacer(Modifier.height(20.dp))
-
-            PlayerControls(
-                playbackState = state.playbackState,
-                isFavorite = isFavorite,
-                onPrevious = viewModel::skipToPrevious,
-                onPlayStop = viewModel::togglePlayStop,
-                onNext = viewModel::skipToNext,
-                onToggleFavorite = { state.currentStation?.let(viewModel::toggleFavorite) }
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            RdsTicker(text = state.rdsInfo?.text, isAvailable = state.rdsInfo?.isAvailable == true)
         }
+
+        if (state.currentStation != null) {
+            Spacer(Modifier.height(12.dp))
+            StationDetails(station = state.currentStation, isVisible = showDetails)
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        PlayerControls(
+            playbackState = state.playbackState,
+            isFavorite = isFavorite,
+            onPrevious = viewModel::skipToPrevious,
+            onPlayStop = viewModel::togglePlayStop,
+            onNext = viewModel::skipToNext,
+            onToggleFavorite = { state.currentStation?.let(viewModel::toggleFavorite) }
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        RdsTicker(text = state.rdsInfo?.text, isAvailable = state.rdsInfo?.isAvailable == true)
     }
 }

@@ -15,8 +15,11 @@ android {
         applicationId = "com.sorin.radiotuner"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        
+        // (RO) Automatizare versiune din Gitea Actions sau fallback local
+        // (EN) Automate versioning from Gitea Actions or local fallback
+        versionCode = project.findProperty("versionCode")?.toString()?.toInt() ?: 10
+        versionName = project.findProperty("versionName")?.toString()?.replace("v", "") ?: "1.0.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
