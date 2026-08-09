@@ -26,7 +26,7 @@ import com.sorin.radiotuner.ui.theme.Graphite700
 import com.sorin.radiotuner.ui.theme.Graphite800
 import com.sorin.radiotuner.ui.theme.Muted
 
-private enum class ListTab { FOUND, FAVORITE }
+private enum class ListTab { FOUND, PREMIUM, FAVORITE }
 
 /**
  * (RO)
@@ -44,6 +44,7 @@ fun StationListPanel(
     onQueryChange: (String) -> Unit,
     foundStations: List<Station>,
     favoriteStations: List<Station>,
+    curatedStations: List<Station>,
     currentStationId: String?,
     onSelectStation: (Station) -> Unit,
     onToggleFavorite: (Station) -> Unit,
@@ -122,13 +123,19 @@ fun StationListPanel(
                 .padding(3.dp)
         ) {
             TabButton(
-                label = stringResource(R.string.tab_found, foundStations.size),
+                label = "GĂSITE",
                 selected = tab == ListTab.FOUND,
                 onClick = { tab = ListTab.FOUND },
                 modifier = Modifier.weight(1f)
             )
             TabButton(
-                label = stringResource(R.string.tab_favorites, favoriteStations.size),
+                label = "ROMÂNIA",
+                selected = tab == ListTab.PREMIUM,
+                onClick = { tab = ListTab.PREMIUM },
+                modifier = Modifier.weight(1f)
+            )
+            TabButton(
+                label = "FAVORITE",
                 selected = tab == ListTab.FAVORITE,
                 onClick = { tab = ListTab.FAVORITE },
                 modifier = Modifier.weight(1f)
@@ -137,11 +144,17 @@ fun StationListPanel(
 
         Spacer(Modifier.height(8.dp))
 
-        val listToShow = if (tab == ListTab.FOUND) foundStations else favoriteStations
-        val emptyText =
-            if (tab == ListTab.FOUND) stringResource(R.string.empty_no_results) else stringResource(
-                R.string.empty_no_favorites
-            )
+        val listToShow = when(tab) {
+            ListTab.FOUND -> foundStations
+            ListTab.PREMIUM -> curatedStations
+            ListTab.FAVORITE -> favoriteStations
+        }
+        
+        val emptyText = when(tab) {
+            ListTab.FOUND -> stringResource(R.string.empty_no_results)
+            ListTab.PREMIUM -> "Niciun post în lista de bază."
+            ListTab.FAVORITE -> stringResource(R.string.empty_no_favorites)
+        }
 
         if (listToShow.isEmpty()) {
             Box(

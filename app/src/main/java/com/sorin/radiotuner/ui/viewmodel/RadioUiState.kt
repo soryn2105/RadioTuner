@@ -19,6 +19,7 @@ data class RadioUiState(
     val query: String = "",
     val foundStations: List<Station> = emptyList(),
     val favoriteStations: List<Station> = emptyList(),
+    val curatedStations: List<Station> = emptyList(),
     val currentStation: Station? = null,
     val playbackState: PlaybackState = PlaybackState.Idle,
     val rdsInfo: RdsInfo? = null,

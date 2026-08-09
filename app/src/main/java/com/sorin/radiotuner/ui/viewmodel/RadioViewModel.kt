@@ -55,6 +55,7 @@ class RadioViewModel(
         observeConnectivity()
         observePlayback()
         loadCountries()
+        _uiState.value = _uiState.value.copy(curatedStations = stationRepository.getCuratedStations())
         search("") // încarcă o listă inițială (populară / implicită)
     }
 

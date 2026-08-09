@@ -9,6 +9,41 @@ import com.sorin.radiotuner.data.model.Station
 object CuratedRomanianStations {
     val STATIONS = listOf(
         Station(
+            id = "curated-prahova-direct",
+            name = "Radio Prahova (Stream Direct)",
+            genre = "Top 40 / Pop",
+            country = "Romania",
+            streamUrl = "http://ronix-live.rph.ro:8100/;",
+            homepage = "https://www.radioprahova.ro"
+        ),
+        Station(
+            id = "curated-capital-dance-ssl",
+            name = "Capital FM Romania Dance",
+            genre = "Dance / Club",
+            country = "Romania",
+            streamUrl = "https://ssl.omegahost.ro:8020/dance",
+            imageUrl = "https://www.capitalfm.ro/logo.png",
+            homepage = "https://www.capitalfm.ro"
+        ),
+        Station(
+            id = "curated-capital-manele-ssl",
+            name = "Capital FM Romania Manele",
+            genre = "Manele / Populară",
+            country = "Romania",
+            streamUrl = "https://ssl.omegahost.ro:8020/stream",
+            imageUrl = "https://www.capitalfm.ro/logo.png",
+            homepage = "https://www.capitalfm.ro"
+        ),
+        Station(
+            id = "curated-capital-etno-ssl",
+            name = "Capital FM Romania Etno",
+            genre = "Etno / Petrecere",
+            country = "Romania",
+            streamUrl = "https://ssl.omegahost.ro:8020/etno",
+            imageUrl = "https://www.capitalfm.ro/logo.png",
+            homepage = "https://www.capitalfm.ro"
+        ),
+        Station(
             id = "curated-kissfm",
             name = "Kiss FM",
             genre = "Pop / Top 40",
@@ -91,54 +126,6 @@ object CuratedRomanianStations {
             genre = "Easy Listening",
             country = "Romania",
             streamUrl = "http://89.238.227.6:8062/;"
-        ),
-        Station(
-            id = "curated-capital-manele",
-            name = "Capital FM Romania Manele",
-            genre = "Manele / Populară",
-            country = "Romania",
-            streamUrl = "https://ssl.omegahost.ro:8020/stream",
-            imageUrl = "https://www.capitalfm.ro/logo.png",
-            homepage = "https://www.capitalfm.ro"
-        ),
-        Station(
-            id = "curated-capital-dance",
-            name = "Capital FM Romania Dance",
-            genre = "Dance / Club",
-            country = "Romania",
-            streamUrl = "https://ssl.omegahost.ro:8020/dance",
-            imageUrl = "https://www.capitalfm.ro/logo.png",
-            homepage = "https://www.capitalfm.ro"
-        ),
-        Station(
-            id = "curated-capital-etno",
-            name = "Capital FM Romania Etno",
-            genre = "Etno / Petrecere",
-            country = "Romania",
-            streamUrl = "https://ssl.omegahost.ro:8020/etno",
-            imageUrl = "https://www.capitalfm.ro/logo.png",
-            homepage = "https://www.capitalfm.ro"
-        ),
-        Station(
-            id = "curated-capital-hiphop",
-            name = "Capital FM Hip-Hop",
-            genre = "Hip-Hop / Rap",
-            country = "Romania",
-            streamUrl = "http://live.capitalfm.ro:8010/;"
-        ),
-        Station(
-            id = "curated-prahova",
-            name = "Radio Prahova",
-            genre = "Pop / Top 40",
-            country = "Romania",
-            streamUrl = "http://streamx.rph.ro:8100/relay"
-        ),
-        Station(
-            id = "curated-prahova-live",
-            name = "Radio Prahova 2 (Live)",
-            genre = "Pop / Top 40",
-            country = "Romania",
-            streamUrl = "http://ronix-live.rph.ro:8100/;"
         ),
         Station(
             id = "curated-manele-ro",

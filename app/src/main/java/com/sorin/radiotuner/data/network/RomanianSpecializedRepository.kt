@@ -62,6 +62,10 @@ class RomanianSpecializedRepository(
         return networkRepository.listCountries()
     }
 
+    override fun getCuratedStations(): List<Station> {
+        return CuratedRomanianStations.STATIONS
+    }
+
     /**
      * (RO) Filtrează lista locală de posturi "Premium" în funcție de termenul căutat.
      */

@@ -36,4 +36,7 @@ interface StationRepository {
 
     /** Lista de țări disponibile pentru filtrare, cu numărul de posturi din fiecare. */
     suspend fun listCountries(): Result<List<CountryOption>>
+
+    /** (RO) Returnează lista de posturi "Premium" verificate manual. */
+    fun getCuratedStations(): List<Station>
 }

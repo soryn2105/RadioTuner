@@ -91,6 +91,8 @@ class NetworkStationRepository : StationRepository {
         }
     }
 
+    override fun getCuratedStations(): List<Station> = emptyList()
+
     private fun RadioBrowserStationDto.toStationOrNull(): Station? {
         val id = stationUuid ?: return null
         val url = urlResolved ?: return null
