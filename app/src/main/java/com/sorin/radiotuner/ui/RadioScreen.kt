@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sorin.radiotuner.BuildConfig
 import com.sorin.radiotuner.R
+import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.player.PlaybackState
 import com.sorin.radiotuner.ui.components.*
 import com.sorin.radiotuner.ui.theme.*
@@ -53,6 +54,8 @@ fun RadioScreen(factory: RadioViewModelFactory) {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showManualStationDialog by remember { mutableStateOf(false) }
+    var stationToEdit by remember { mutableStateOf<Station?>(null) }
 
     Box(modifier = Modifier.fillMaxSize().background(Graphite900)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -79,6 +82,8 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                         canLoadMore = state.canLoadMore,
                         isLoadingMore = state.isLoadingMore,
                         onLoadMore = viewModel::loadMore,
+                        onAddManualClick = { showManualStationDialog = true },
+                        onEditStation = { stationToEdit = it },
                         errorMessage = state.errorMessage,
                         modifier = Modifier.width(330.dp)
                     )
@@ -142,6 +147,8 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                             canLoadMore = state.canLoadMore,
                             isLoadingMore = state.isLoadingMore,
                             onLoadMore = viewModel::loadMore,
+                            onAddManualClick = { showManualStationDialog = true },
+                            onEditStation = { stationToEdit = it },
                             errorMessage = state.errorMessage,
                             modifier = Modifier.weight(1f)
                         )
@@ -166,6 +173,29 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                 TextButton(onClick = { showAboutDialog = false }) {
                     Text("OK")
                 }
+            }
+        )
+    }
+
+    if (showManualStationDialog) {
+        ManualStationDialog(
+            onDismiss = { showManualStationDialog = false },
+            onConfirm = { name, url ->
+                viewModel.addManualStation(name, url)
+                showManualStationDialog = false
+            }
+        )
+    }
+
+    if (stationToEdit != null) {
+        ManualStationDialog(
+            initialName = stationToEdit!!.name,
+            initialUrl = stationToEdit!!.streamUrl,
+            isEditing = true,
+            onDismiss = { stationToEdit = null },
+            onConfirm = { name, url ->
+                viewModel.updateManualStation(stationToEdit!!, name, url)
+                stationToEdit = null
             }
         )
     }

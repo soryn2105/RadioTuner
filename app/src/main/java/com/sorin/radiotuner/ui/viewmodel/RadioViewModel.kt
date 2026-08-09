@@ -47,8 +47,8 @@ class RadioViewModel(
     private var reconnectJob: Job? = null
     private var wasPlayingBeforeOffline = false
 
-    /** Câte posturi cerem pe pagină — trebuie să corespundă cu "limit" din RadioBrowserApi.search. */
-    private val pageSize = 50
+    /** Câte posturi cerem pe pagină — trebuie să corespundă cu "limit" din repository. */
+    private val pageSize = 100
 
     init {
         observeFavorites()
@@ -79,10 +79,6 @@ class RadioViewModel(
     private fun search(query: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSearching = true, errorMessage = null)
-            
-            // (RO) Arătăm utilizatorului că și verificăm posturile
-            // (EN) Show the user that we are also verifying stations
-            _uiState.value = _uiState.value.copy(errorMessage = "Verificăm disponibilitatea posturilor...")
 
             val selectedCountry = _uiState.value.selectedCountry
             val result = stationRepository.search(
@@ -182,6 +178,37 @@ class RadioViewModel(
     fun toggleFavorite(station: Station) {
         viewModelScope.launch {
             favoritesRepository.toggleFavorite(station)
+        }
+    }
+
+    /** (RO) Adaugă un post manual direct în lista de favorite. */
+    fun addManualStation(name: String, url: String) {
+        viewModelScope.launch {
+            val manualStation = Station(
+                id = "manual-${System.currentTimeMillis()}",
+                name = name.trim(),
+                genre = "Manual / Direct",
+                country = "Local",
+                streamUrl = url.trim(),
+                isFavorite = true
+            )
+            favoritesRepository.toggleFavorite(manualStation)
+        }
+    }
+
+    /** (RO) Actualizează datele unui post existent în favorite. */
+    fun updateManualStation(station: Station, newName: String, newUrl: String) {
+        viewModelScope.launch {
+            val updated = station.copy(
+                name = newName.trim(),
+                streamUrl = newUrl.trim()
+            )
+            favoritesRepository.updateFavorite(updated)
+            
+            // Dacă postul actualizat este cel care cântă acum, îl reîncărcăm în player (opțional)
+            if (_uiState.value.currentStation?.id == updated.id) {
+                _uiState.value = _uiState.value.copy(currentStation = updated)
+            }
         }
     }
 

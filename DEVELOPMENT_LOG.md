@@ -239,6 +239,23 @@ Two small issues found after reviewing the uploaded, working build:
     - Added corresponding string resources in `strings.xml`.
 - **Details**: Users can now easily check the current app version by tapping the info icon in the top bar.
 
+## 22. Manual Radio Station Addition
+- **Requirement**: Allow users to manually add their own radio streams if they have the direct URL.
+- **Implementation**:
+    - **`ManualStationDialog.kt`**: Created a new dialog with input fields for Name and Stream URL.
+    - **`RadioViewModel.kt`**: Added `addManualStation(name, url)` which creates a `Station` object and persists it directly into the Favorites list.
+    - **UI Integration**: Added a "+" button next to the search bar in the `StationListPanel`.
+- **Result**: Users can now expand their collection with private or custom streams not found in the public database.
+
+## 23. Manual Station Editing
+- **Requirement**: Allow users to edit the name or stream URL of stations in their favorites list.
+- **Implementation**:
+    - **`FavoritesRepository`**: Added `updateFavorite(station)` to the interface and `LocalFavoritesRepository`.
+    - **`RadioViewModel`**: Added `updateManualStation(station, newName, newUrl)` to handle data updates.
+    - **`ManualStationDialog`**: Refactored to support both "Add" and "Edit" modes by accepting initial values and dynamic labels.
+    - **`StationRow`**: Added an **Edit (pencil icon)** button that appears only for items in the Favorites tab.
+- **Result**: Users have full control over their custom or saved streams, allowing them to fix broken links or rename stations manually.
+
 ## 22. Enhanced Multi-Source Search & Real-Time Validation
 - **Requirement**: Find all available stations (even if not strictly in the country filter) and show only working ones.
 - **Implementation**:

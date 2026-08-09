@@ -31,6 +31,14 @@ class LocalFavoritesRepository(private val store: FavoritesDataStore) : Favorite
         store.saveFavorites(updated)
     }
 
+    override suspend fun updateFavorite(station: Station) {
+        val current = store.observeFavorites().first()
+        val updated = current.map {
+            if (it.id == station.id) station else it
+        }
+        store.saveFavorites(updated)
+    }
+
     override suspend fun isFavorite(stationId: String): Boolean {
         return store.observeFavorites().first().any {it.id == stationId}
     }

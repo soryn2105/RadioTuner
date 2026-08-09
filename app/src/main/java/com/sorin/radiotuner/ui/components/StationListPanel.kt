@@ -7,11 +7,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +53,8 @@ fun StationListPanel(
     canLoadMore: Boolean = false,
     isLoadingMore: Boolean = false,
     onLoadMore: () -> Unit = {},
+    onAddManualClick: () -> Unit = {},
+    onEditStation: (Station) -> Unit = {},
     errorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -63,7 +63,22 @@ fun StationListPanel(
     val favoriteIds = favoriteStations.map { it.id }.toSet()
 
     Column(modifier = modifier.fillMaxHeight().padding(16.dp)) {
-        SearchBar(query = query, onQueryChange = onQueryChange)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                SearchBar(query = query, onQueryChange = onQueryChange)
+            }
+            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = onAddManualClick,
+                colors = IconButtonDefaults.iconButtonColors(containerColor = Graphite700)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add manual", tint = Amber)
+            }
+        }
 
         Spacer(Modifier.height(8.dp))
 
@@ -143,7 +158,8 @@ fun StationListPanel(
                         isActive = station.id == currentStationId,
                         isFavorite = favoriteIds.contains(station.id),
                         onClick = { onSelectStation(station) },
-                        onToggleFavorite = { onToggleFavorite(station) }
+                        onToggleFavorite = { onToggleFavorite(station) },
+                        onEdit = if (tab == ListTab.FAVORITE) { { onEditStation(station) } } else null
                     )
                 }
 

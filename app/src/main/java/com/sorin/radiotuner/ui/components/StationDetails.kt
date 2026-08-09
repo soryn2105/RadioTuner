@@ -1,5 +1,9 @@
 package com.sorin.radiotuner.ui.components
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -7,28 +11,27 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sorin.radiotuner.data.model.Station
-import com.sorin.radiotuner.ui.theme.Amber
-import com.sorin.radiotuner.ui.theme.Graphite800
-import com.sorin.radiotuner.ui.theme.Muted
-import com.sorin.radiotuner.ui.theme.Cream
+import com.sorin.radiotuner.ui.theme.*
 
 /**
  * (RO)
  * Afișează informații detaliate despre postul selectat: site web, URL flux, bitrate.
- * (EN)
- * Displays detailed information about the selected station: website, stream URL, bitrate.
+ * Include funcție de copiere pentru adresa de stream.
  */
 @Composable
 fun StationDetails(
@@ -36,6 +39,8 @@ fun StationDetails(
     isVisible: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     AnimatedVisibility(
         visible = isVisible,
         enter = expandVertically(),
@@ -53,11 +58,32 @@ fun StationDetails(
                 label = "Site Web",
                 value = station.homepage ?: "Nespecificat"
             )
-            InfoRow(
-                icon = Icons.Default.Link,
-                label = "Adresă Flux",
-                value = station.streamUrl
-            )
+            
+            // Adresă Flux cu buton de copiere
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.weight(1f)) {
+                    InfoRow(
+                        icon = Icons.Default.Link,
+                        label = "Adresă Flux",
+                        value = station.streamUrl
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        copyToClipboard(context, station.streamUrl)
+                        Toast.makeText(context, "Link copiat!", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy",
+                        tint = Amber.copy(alpha = 0.6f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
             InfoRow(
                 icon = Icons.Default.Speed,
                 label = "Calitate",
@@ -65,6 +91,12 @@ fun StationDetails(
             )
         }
     }
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("Radio Stream URL", text)
+    clipboard.setPrimaryClip(clip)
 }
 
 @Composable

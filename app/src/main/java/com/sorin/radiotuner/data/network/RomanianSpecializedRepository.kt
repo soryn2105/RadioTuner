@@ -44,10 +44,14 @@ class RomanianSpecializedRepository(
         if (offset == 0) {
             val curated = filterCurated(query, country, countryCode)
             
-            return networkResult.map { networkStations ->
-                // (RO) Combinăm cele două liste, eliminând duplicatele (după nume)
-                val combined = (curated + networkStations).distinctBy { it.name.lowercase().trim() }
-                combined
+            return if (networkResult.isSuccess) {
+                networkResult.map { networkStations ->
+                    // (RO) Combinăm cele două liste, punând cele "Premium" primele și eliminând duplicatele
+                    (curated + networkStations).distinctBy { it.name.lowercase().trim() }
+                }
+            } else {
+                // (RO) Chiar dacă rețeaua a eșuat, returnăm măcar lista locală curated
+                Result.success(curated)
             }
         }
 

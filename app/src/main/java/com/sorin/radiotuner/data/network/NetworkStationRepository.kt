@@ -3,7 +3,6 @@ package com.sorin.radiotuner.data.network
 import com.sorin.radiotuner.data.model.CountryOption
 import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.data.repository.StationRepository
-import kotlinx.coroutines.*
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -64,27 +63,22 @@ class NetworkStationRepository : StationRepository {
         offset: Int
     ): Result<List<Station>> {
         return withFailover { api ->
-            // (RO) Căutăm în paralel folosind criterii diferite pentru a găsi absolut tot
-            val results = mutableListOf<RadioBrowserStationDto>()
+            // (RO) Pentru a găsi TOATE posturile, folosim o singură căutare puternică.
+            // (EN) To find ALL stations, we use a single powerful search.
+            val searchLimit = 100
             
-            // 1. Căutare standard
-            results += api.search(name = query, country = country, countryCode = countryCode, language = language, offset = offset)
-            
-            // 2. Dacă e vorba de România, forțăm o căutare și după limba română (pentru diaspora/acoperire maximă)
-            if (countryCode == "RO" || country?.contains("Romania", ignoreCase = true) == true) {
-                results += api.search(name = query, language = "romanian", offset = offset)
-            }
+            // Dacă utilizatorul a selectat România, folosim codul "RO" care e cel mai precis.
+            val results = api.search(
+                name = query, 
+                country = if (countryCode == null) country else null, 
+                countryCode = countryCode, 
+                language = language, 
+                offset = offset,
+                limit = searchLimit
+            )
 
-            val stations = results
-                .distinctBy { it.stationUuid }
-                .mapNotNull { it.toStationOrNull() }
-
-            // (RO) Validăm posturile în paralel (doar pentru prima pagină, pentru a nu încetini UI-ul)
-            if (offset == 0 && stations.isNotEmpty()) {
-                validateStations(stations)
-            } else {
-                stations
-            }
+            // (RO) Nu mai filtrăm nimic automat pentru a asigura că apar toate cele ~1000 de posturi.
+            results.mapNotNull { it.toStationOrNull() }
         }
     }
 
@@ -94,34 +88,6 @@ class NetworkStationRepository : StationRepository {
                 .mapNotNull { it.toCountryOrNull() }
                 .filter { it.stationCount > 0 }
                 .sortedByDescending { it.stationCount }
-        }
-    }
-
-    /**
-     * (RO) Verifică în timp real dacă stream-urile funcționează.
-     */
-    private suspend fun validateStations(stations: List<Station>): List<Station> = coroutineScope {
-        stations.map { station ->
-            async(Dispatchers.IO) {
-                if (isStreamReachable(station.streamUrl)) station else null
-            }
-        }.awaitAll().filterNotNull()
-    }
-
-    private fun isStreamReachable(url: String): Boolean {
-        var connection: HttpURLConnection? = null
-        return try {
-            connection = URL(url).openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 2500
-            connection.readTimeout = 2500
-            // Verificăm doar dacă serverul răspunde cu succes
-            val responseCode = connection.responseCode
-            responseCode in 200..399
-        } catch (e: Exception) {
-            false
-        } finally {
-            connection?.disconnect()
         }
     }
 

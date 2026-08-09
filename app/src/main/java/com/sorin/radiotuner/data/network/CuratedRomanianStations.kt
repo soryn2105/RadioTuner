@@ -94,24 +94,37 @@ object CuratedRomanianStations {
         ),
         Station(
             id = "curated-capital-manele",
-            name = "Capital FM Manele",
+            name = "Capital FM Romania Manele",
             genre = "Manele / Populară",
             country = "Romania",
-            streamUrl = "https://ssl.omegahost.ro:8020/stream"
+            streamUrl = "https://ssl.omegahost.ro:8020/stream",
+            imageUrl = "https://www.capitalfm.ro/logo.png",
+            homepage = "https://www.capitalfm.ro"
         ),
         Station(
             id = "curated-capital-dance",
-            name = "Capital FM Dance",
+            name = "Capital FM Romania Dance",
             genre = "Dance / Club",
             country = "Romania",
-            streamUrl = "http://dance.capitalfm.ro:8000/stream"
+            streamUrl = "https://ssl.omegahost.ro:8020/dance",
+            imageUrl = "https://www.capitalfm.ro/logo.png",
+            homepage = "https://www.capitalfm.ro"
         ),
         Station(
             id = "curated-capital-etno",
-            name = "Capital FM Etno",
+            name = "Capital FM Romania Etno",
             genre = "Etno / Petrecere",
             country = "Romania",
-            streamUrl = "http://etno.capitalfm.ro:8000/stream"
+            streamUrl = "https://ssl.omegahost.ro:8020/etno",
+            imageUrl = "https://www.capitalfm.ro/logo.png",
+            homepage = "https://www.capitalfm.ro"
+        ),
+        Station(
+            id = "curated-capital-hiphop",
+            name = "Capital FM Hip-Hop",
+            genre = "Hip-Hop / Rap",
+            country = "Romania",
+            streamUrl = "http://live.capitalfm.ro:8010/;"
         ),
         Station(
             id = "curated-prahova",
@@ -119,6 +132,13 @@ object CuratedRomanianStations {
             genre = "Pop / Top 40",
             country = "Romania",
             streamUrl = "http://streamx.rph.ro:8100/relay"
+        ),
+        Station(
+            id = "curated-prahova-live",
+            name = "Radio Prahova 2 (Live)",
+            genre = "Pop / Top 40",
+            country = "Romania",
+            streamUrl = "http://ronix-live.rph.ro:8100/;"
         ),
         Station(
             id = "curated-manele-ro",
