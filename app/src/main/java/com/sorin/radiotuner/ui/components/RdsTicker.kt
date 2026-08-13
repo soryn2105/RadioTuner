@@ -57,7 +57,7 @@ fun RdsTicker(text: String?, isAvailable: Boolean) {
             Text(
                 text = if (isAvailable && ! text.isNullOrBlank()) text else stringResource(R.string.rds_stopped),
                 fontFamily = FontFamily.Monospace,
-                fontSize = 13.sp,
+                fontSize = 17.sp,
                 color = LedGreen,
                 maxLines = 1,
                 modifier = Modifier.basicMarquee()

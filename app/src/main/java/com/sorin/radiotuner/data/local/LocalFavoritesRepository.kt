@@ -37,4 +37,9 @@ class LocalFavoritesRepository(private val store: FavoritesDataStore) : Favorite
     override suspend fun isFavorite(stationId: String): Boolean {
         return store.observeFavorites().first().any { it.id == stationId }
     }
+
+    override fun observeLastTab(): Flow<String?> = store.observeLastTab()
+    override suspend fun saveLastTab(tabName: String) = store.saveLastTab(tabName)
+    override fun observeLastStation(): Flow<Station?> = store.observeLastStation()
+    override suspend fun saveLastStation(station: Station?) = store.saveLastStation(station)
 }

@@ -87,7 +87,7 @@ fun TuningDial(statusLabel: String, isPlaying: Boolean, imageUrl: String? = null
                     text = statusLabel,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    fontSize = 18.sp,
                     color = if (isPlaying) Cream else Muted
                 )
             }

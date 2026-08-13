@@ -33,17 +33,7 @@ import com.sorin.radiotuner.ui.viewmodel.RadioViewModelFactory
 
 /**
  * (RO)
- * Ecranul principal. Comută complet layout-ul după orientare:
- *  - LANDSCAPE: panoul de căutare/liste stă fix pe stânga (ca înainte).
- *  - PORTRAIT: panoul e ascuns; apare doar peste player, ca un sertar,
- *    la apăsarea butonului hamburger, și se închide automat la selectarea
- *    unui post.
- * (EN)
- * The main screen. Composes the entire layout depending on the orientation:
- * - LANDSCAPE: the search/list panel is fixed on the left side (before the player).
- * - PORTRAIT: the panel is hidden; it appears over the player, as a drawer,
- * when the hamburger button is pressed, and closes automatically when a station is selected.
- * @param factory Factory for the view model.
+ * Ecranul principal.
  */
 @Composable
 fun RadioScreen(factory: RadioViewModelFactory) {
@@ -73,7 +63,8 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                         onQueryChange = viewModel::onQueryChange,
                         foundStations = state.foundStations,
                         favoriteStations = state.favoriteStations,
-                        curatedStations = state.curatedStations,
+                        selectedTab = state.selectedTab,
+                        onTabSelected = viewModel::onTabSelected,
                         currentStationId = state.currentStation?.id,
                         onSelectStation = viewModel::selectStation,
                         onToggleFavorite = viewModel::toggleFavorite,
@@ -111,7 +102,6 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                 exit = slideOutHorizontally(targetOffsetX = { -it })
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // fundal semi-transparent, clic = închide
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -129,9 +119,9 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(stringResource(R.string.menu_title), color = Cream, fontWeight = FontWeight.Bold)
+                            Text("MENIU", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                             IconButton(onClick = { viewModel.toggleMenu(false) }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.menu_close), tint = Cream)
+                                Icon(Icons.Default.Close, contentDescription = null, tint = Cream)
                             }
                         }
                         StationListPanel(
@@ -139,7 +129,8 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                             onQueryChange = viewModel::onQueryChange,
                             foundStations = state.foundStations,
                             favoriteStations = state.favoriteStations,
-                            curatedStations = state.curatedStations,
+                            selectedTab = state.selectedTab,
+                            onTabSelected = viewModel::onTabSelected,
                             currentStationId = state.currentStation?.id,
                             onSelectStation = viewModel::selectStation,
                             onToggleFavorite = viewModel::toggleFavorite,
@@ -163,17 +154,17 @@ fun RadioScreen(factory: RadioViewModelFactory) {
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text(stringResource(R.string.about_title)) },
+            title = { Text("Despre Aplicație", fontSize = 20.sp) },
             text = {
                 Column {
-                    Text(stringResource(R.string.about_version, BuildConfig.VERSION_NAME))
+                    Text("Versiune: ${BuildConfig.VERSION_NAME}", fontSize = 16.sp)
                     Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.about_developer))
+                    Text("Dezvoltat de Sorin", fontSize = 16.sp)
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showAboutDialog = false }) {
-                    Text("OK")
+                    Text("OK", fontSize = 16.sp)
                 }
             }
         )
@@ -220,33 +211,33 @@ private fun AppHeader(
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (showMenuButton) {
                 IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu_open), tint = Cream)
+                    Icon(Icons.Default.Menu, contentDescription = null, tint = Cream)
                 }
             }
-            Icon(Icons.Default.Radio, contentDescription = null, tint = Amber, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.Radio, contentDescription = null, tint = Amber, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(8.dp))
             Text(
-                stringResource(R.string.app_name).uppercase(),
+                "AMBER TUNER",
                 color = Cream,
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
+                fontSize = 20.sp
             )
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onAboutClick) {
-                Icon(Icons.Default.Info, contentDescription = stringResource(R.string.about_title), tint = Muted)
+                Icon(Icons.Default.Info, contentDescription = null, tint = Muted, modifier = Modifier.size(24.dp))
             }
             Icon(
                 imageVector = if (isOnline) Icons.Default.Wifi else Icons.Default.WifiOff,
                 contentDescription = null,
                 tint = if (isOnline) LedGreen else HeartRed,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = if (isOnline) stringResource(R.string.status_online) else stringResource(R.string.status_offline),
-                fontSize = 10.sp,
+                text = if (isOnline) "ONLINE" else "OFFLINE",
+                fontSize = 12.sp,
                 color = Muted
             )
         }
@@ -264,10 +255,10 @@ private fun PlayerPane(
     var showDetails by remember { mutableStateOf(false) }
 
     val statusLabel = when (state.playbackState) {
-        is PlaybackState.Playing -> stringResource(R.string.status_on_air)
-        is PlaybackState.Buffering -> stringResource(R.string.status_buffering)
-        is PlaybackState.Error -> stringResource(R.string.status_error)
-        else -> stringResource(R.string.status_idle)
+        is PlaybackState.Playing -> "ON AIR"
+        is PlaybackState.Buffering -> "BUFFERING..."
+        is PlaybackState.Error -> "ERROR"
+        else -> "STOPPED"
     }
 
     Column(
@@ -283,7 +274,7 @@ private fun PlayerPane(
             imageUrl = state.currentStation?.imageUrl
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -294,10 +285,10 @@ private fun PlayerPane(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = state.currentStation?.name ?: stringResource(R.string.no_station_selected),
+                    text = state.currentStation?.name ?: "Niciun post selectat",
                     color = Cream,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
+                    fontSize = 26.sp,
                     maxLines = 2,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
@@ -305,28 +296,29 @@ private fun PlayerPane(
                     Text(
                         text = "${state.currentStation.genre} · ${state.currentStation.country}",
                         color = Muted,
-                        fontSize = 13.sp
+                        fontSize = 16.sp
                     )
                 }
             }
             
             if (state.currentStation != null) {
-                IconButton(onClick = { showDetails = !showDetails }) {
+                IconButton(onClick = { showDetails = !showDetails }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = "Info",
-                        tint = if (showDetails) Amber else Muted
+                        tint = if (showDetails) Amber else Muted,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
         }
 
         if (state.currentStation != null) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
             StationDetails(station = state.currentStation, isVisible = showDetails)
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
         PlayerControls(
             playbackState = state.playbackState,

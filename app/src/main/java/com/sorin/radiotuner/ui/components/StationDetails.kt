@@ -51,7 +51,7 @@ fun StationDetails(
                 .fillMaxWidth()
                 .background(Graphite800.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             InfoRow(
                 icon = Icons.Default.Language,
@@ -73,13 +73,13 @@ fun StationDetails(
                         copyToClipboard(context, station.streamUrl)
                         Toast.makeText(context, "Link copiat!", Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
                         contentDescription = "Copy",
-                        tint = Amber.copy(alpha = 0.6f),
-                        modifier = Modifier.size(16.dp)
+                        tint = Amber.copy(alpha = 0.8f),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -93,32 +93,32 @@ fun StationDetails(
     }
 }
 
-private fun copyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText("Radio Stream URL", text)
-    clipboard.setPrimaryClip(clip)
-}
-
 @Composable
 private fun InfoRow(icon: ImageVector, label: String, value: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = Amber,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(20.dp)
         )
         Column {
-            Text(label, fontSize = 10.sp, color = Muted)
+            Text(label, fontSize = 12.sp, color = Muted)
             Text(
                 text = value,
-                fontSize = 12.sp,
+                fontSize = 15.sp,
                 color = Cream,
-                maxLines = 2
+                maxLines = 3
             )
         }
     }
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("Radio Stream URL", text)
+    clipboard.setPrimaryClip(clip)
 }

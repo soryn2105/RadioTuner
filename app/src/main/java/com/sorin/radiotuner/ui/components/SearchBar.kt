@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sorin.radiotuner.R
 import com.sorin.radiotuner.ui.theme.Graphite700
 import com.sorin.radiotuner.ui.theme.Muted
@@ -55,8 +56,9 @@ fun SearchBar(
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text(stringResource(R.string.search_placeholder)) },
+            placeholder = { Text(stringResource(R.string.search_placeholder), fontSize = 16.sp) },
             singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,

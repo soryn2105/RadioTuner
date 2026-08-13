@@ -20,4 +20,10 @@ interface FavoritesRepository {
     suspend fun toggleFavorite(station: Station)
     suspend fun updateFavorite(station: Station)
     suspend fun isFavorite(stationId: String): Boolean
+
+    // (RO) Persistență stare UI
+    fun observeLastTab(): Flow<String?>
+    suspend fun saveLastTab(tabName: String)
+    fun observeLastStation(): Flow<Station?>
+    suspend fun saveLastStation(station: Station?)
 }

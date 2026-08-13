@@ -75,7 +75,7 @@ fun StationRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = station.name,
-                    fontSize = 13.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Cream,
                     maxLines = 1,
@@ -83,19 +83,19 @@ fun StationRow(
                     modifier = Modifier.weight(1f, fill = false)
                 )
                 if (isCurated) {
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                     Icon(
                         imageVector = Icons.Default.Verified,
                         contentDescription = "Verified",
                         tint = Amber,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "${station.genre} · ${station.country}",
-                    fontSize = 11.sp,
+                    fontSize = 14.sp,
                     color = Muted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -104,7 +104,7 @@ fun StationRow(
                 if (station.bitrate != null && station.bitrate > 0) {
                     Text(
                         text = " · ${station.bitrate}k",
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         color = Amber.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Bold
                     )
@@ -117,24 +117,24 @@ fun StationRow(
         if (onEdit != null) {
             IconButton(
                 onClick = onEdit, 
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Edit,
                     contentDescription = "Edit",
                     tint = Amber,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
             Spacer(Modifier.width(6.dp))
         }
 
-        IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
+        IconButton(onClick = onToggleFavorite, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = null,
                 tint = if (isFavorite) HeartRed else Muted,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(24.dp)
             )
         }
     }

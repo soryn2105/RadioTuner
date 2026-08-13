@@ -35,6 +35,8 @@ private val Context.dataStore by preferencesDataStore(name = "radio_tuner_prefs"
 
 class FavoritesDataStore(private val context: Context) {
     private val key = stringPreferencesKey("favorites_json")
+    private val lastTabKey = stringPreferencesKey("last_tab")
+    private val lastStationKey = stringPreferencesKey("last_station_json")
     private val gson = Gson()
 
     fun observeFavorites(): Flow<List<Station>> {
@@ -52,6 +54,28 @@ class FavoritesDataStore(private val context: Context) {
     suspend fun saveFavorites(stations: List<Station>) {
         context.dataStore.edit {prefs ->
             prefs[key] = gson.toJson(stations)
+        }
+    }
+
+    fun observeLastTab(): Flow<String?> = context.dataStore.data.map { it[lastTabKey] }
+
+    suspend fun saveLastTab(tabName: String) {
+        context.dataStore.edit { it[lastTabKey] = tabName }
+    }
+
+    fun observeLastStation(): Flow<Station?> = context.dataStore.data.map { prefs ->
+        val json = prefs[lastStationKey] ?: return@map null
+        try {
+            gson.fromJson(json, Station::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun saveLastStation(station: Station?) {
+        context.dataStore.edit { prefs ->
+            if (station == null) prefs.remove(lastStationKey)
+            else prefs[lastStationKey] = gson.toJson(station)
         }
     }
 }

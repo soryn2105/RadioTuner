@@ -32,7 +32,7 @@ import com.sorin.radiotuner.util.ConnectivityObserver
 
 class AppContainer (context: Context) {
     val stationRepository: StationRepository by lazy {
-        RomanianSpecializedRepository()
+        NetworkStationRepository()
     }
 
     val favoritesRepository: FavoritesRepository by lazy {

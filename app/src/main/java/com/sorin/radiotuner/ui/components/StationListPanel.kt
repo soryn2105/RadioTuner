@@ -13,12 +13,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sorin.radiotuner.R
 import com.sorin.radiotuner.data.model.CountryOption
 import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.ui.theme.Amber
@@ -26,17 +24,12 @@ import com.sorin.radiotuner.ui.theme.Graphite700
 import com.sorin.radiotuner.ui.theme.Graphite800
 import com.sorin.radiotuner.ui.theme.Muted
 
-private enum class ListTab { FOUND, PREMIUM, FAVORITE }
+private enum class ListTab { FOUND, FAVORITE }
 
 /**
  * (RO)
  * Panoul din stânga (landscape) sau din interiorul sertarului (portret):
- * căutare + filtru de țară + cele două liste comutabile. O singură
- * componentă, refolosită în ambele moduri, ca UI-ul să nu diveargă în timp.
- * (EN)
- * The left panel (landscape) or inside the drawer (portrait):
- * search + country filter + the two switchable lists. A single component,
- * reused in both ways, so the UI doesn't diverge over time.
+ * căutare + filtru de țară + cele două liste comutabile.
  */
 @Composable
 fun StationListPanel(
@@ -44,7 +37,8 @@ fun StationListPanel(
     onQueryChange: (String) -> Unit,
     foundStations: List<Station>,
     favoriteStations: List<Station>,
-    curatedStations: List<Station>,
+    selectedTab: String,
+    onTabSelected: (String) -> Unit,
     currentStationId: String?,
     onSelectStation: (Station) -> Unit,
     onToggleFavorite: (Station) -> Unit,
@@ -59,7 +53,7 @@ fun StationListPanel(
     errorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
-    var tab by remember { mutableStateOf(ListTab.FOUND) }
+    val tab = try { ListTab.valueOf(selectedTab) } catch (e: Exception) { ListTab.FOUND }
     var showCountryDialog by remember { mutableStateOf(false) }
     val favoriteIds = favoriteStations.map { it.id }.toSet()
 
@@ -75,93 +69,80 @@ fun StationListPanel(
             Spacer(Modifier.width(8.dp))
             IconButton(
                 onClick = onAddManualClick,
-                colors = IconButtonDefaults.iconButtonColors(containerColor = Graphite700)
+                colors = IconButtonDefaults.iconButtonColors(containerColor = Graphite700),
+                modifier = Modifier.size(48.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add manual", tint = Amber)
+                Icon(Icons.Default.Add, contentDescription = "Add manual", tint = Amber, modifier = Modifier.size(28.dp))
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
 
         // Filtru de țară — buton care deschide selectorul; arată alegerea curentă.
         OutlinedButton(
             onClick = { showCountryDialog = true },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(10.dp)
         ) {
-            Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
+            Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = selectedCountry?.name ?: "Toate țările",
-                fontSize = 12.sp,
+                fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
         if (errorMessage != null) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(androidx.compose.ui.graphics.Color(0xFF3A2420), RoundedCornerShape(8.dp))
-                    .padding(10.dp)
+                    .padding(12.dp)
             ) {
                 Text(
                     text = "⚠ $errorMessage",
                     color = androidx.compose.ui.graphics.Color(0xFFFF8A80),
-                    fontSize = 11.sp
+                    fontSize = 14.sp
                 )
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(16.dp))
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Graphite800, RoundedCornerShape(8.dp))
-                .padding(3.dp)
+                .padding(4.dp)
         ) {
             TabButton(
                 label = "GĂSITE",
                 selected = tab == ListTab.FOUND,
-                onClick = { tab = ListTab.FOUND },
-                modifier = Modifier.weight(1f)
-            )
-            TabButton(
-                label = "ROMÂNIA",
-                selected = tab == ListTab.PREMIUM,
-                onClick = { tab = ListTab.PREMIUM },
+                onClick = { onTabSelected("FOUND") },
                 modifier = Modifier.weight(1f)
             )
             TabButton(
                 label = "FAVORITE",
                 selected = tab == ListTab.FAVORITE,
-                onClick = { tab = ListTab.FAVORITE },
+                onClick = { onTabSelected("FAVORITE") },
                 modifier = Modifier.weight(1f)
             )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
 
-        val listToShow = when(tab) {
-            ListTab.FOUND -> foundStations
-            ListTab.PREMIUM -> curatedStations
-            ListTab.FAVORITE -> favoriteStations
-        }
-        
-        val emptyText = when(tab) {
-            ListTab.FOUND -> stringResource(R.string.empty_no_results)
-            ListTab.PREMIUM -> "Niciun post în lista de bază."
-            ListTab.FAVORITE -> stringResource(R.string.empty_no_favorites)
-        }
+        val listToShow = if (tab == ListTab.FOUND) foundStations else favoriteStations
+        val emptyText = if (tab == ListTab.FOUND) "Niciun post găsit." else "Niciun favorit salvat."
 
         if (listToShow.isEmpty()) {
             Box(
-                Modifier.fillMaxWidth().padding(top = 24.dp),
+                Modifier.fillMaxWidth().padding(top = 32.dp),
                 contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
-                Text(emptyText, color = Muted, fontSize = 12.sp)
+                Text(emptyText, color = Muted, fontSize = 16.sp)
             }
         } else {
             LazyColumn {
@@ -172,26 +153,26 @@ fun StationListPanel(
                         isFavorite = favoriteIds.contains(station.id),
                         onClick = { onSelectStation(station) },
                         onToggleFavorite = { onToggleFavorite(station) },
-                        onEdit = if (tab == ListTab.FAVORITE || tab == ListTab.PREMIUM) { { onEditStation(station) } } else null
+                        onEdit = if (tab == ListTab.FAVORITE) { { onEditStation(station) } } else null
                     )
                 }
 
-                // "Încarcă mai multe" — apare doar la tab-ul GĂSITE, doar
-                // dacă mai există posturi de adus. Înlocuiește limita
-                // fixă de rezultate cu ceva controlat de utilizator.
                 if (tab == ListTab.FOUND && canLoadMore) {
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 10.dp),
+                                .padding(vertical = 16.dp),
                             contentAlignment = androidx.compose.ui.Alignment.Center
                         ) {
                             if (isLoadingMore) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 3.dp)
                             } else {
-                                OutlinedButton(onClick = onLoadMore) {
-                                    Text("Încarcă mai multe", fontSize = 12.sp)
+                                OutlinedButton(
+                                    onClick = onLoadMore,
+                                    modifier = Modifier.height(48.dp)
+                                ) {
+                                    Text("Încarcă mai multe", fontSize = 14.sp)
                                 }
                             }
                         }
@@ -221,12 +202,12 @@ private fun TabButton(label: String, selected: Boolean, onClick: () -> Unit, mod
             .clip(RoundedCornerShape(6.dp))
             .background(if (selected) Graphite700 else androidx.compose.ui.graphics.Color.Transparent)
             .clickable { onClick() }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 12.dp),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
         Text(
             text = label,
-            fontSize = 10.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = if (selected) Amber else Muted
         )

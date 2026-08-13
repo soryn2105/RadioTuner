@@ -55,8 +55,36 @@ class RadioViewModel(
         observeConnectivity()
         observePlayback()
         loadCountries()
-        _uiState.value = _uiState.value.copy(curatedStations = stationRepository.getCuratedStations())
-        search("") // încarcă o listă inițială (populară / implicită)
+        restoreState()
+        search("") // încarcă o listă inițială
+    }
+
+    private fun restoreState() {
+        viewModelScope.launch {
+            favoritesRepository.observeLastTab().collectLatest { tab ->
+                if (tab != null) {
+                    _uiState.value = _uiState.value.copy(selectedTab = tab)
+                }
+            }
+        }
+        viewModelScope.launch {
+            favoritesRepository.observeLastStation().collectLatest { station ->
+                if (station != null && _uiState.value.currentStation == null) {
+                    _uiState.value = _uiState.value.copy(currentStation = station)
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Tab & Stare UI
+    // ---------------------------------------------------------------
+
+    fun onTabSelected(tabName: String) {
+        _uiState.value = _uiState.value.copy(selectedTab = tabName)
+        viewModelScope.launch {
+            favoritesRepository.saveLastTab(tabName)
+        }
     }
 
     // ---------------------------------------------------------------
@@ -171,17 +199,7 @@ class RadioViewModel(
     private fun observeFavorites() {
         viewModelScope.launch {
             favoritesRepository.observeFavorites().collectLatest { favorites ->
-                val baseCurated = stationRepository.getCuratedStations()
-                
-                // (RO) Înlocuim posturile "Premium" cu versiunile lor editate din favorite (dacă există)
-                val effectiveCurated = baseCurated.map { base ->
-                    favorites.find { it.id == base.id } ?: base
-                }
-
-                _uiState.value = _uiState.value.copy(
-                    favoriteStations = favorites,
-                    curatedStations = effectiveCurated
-                )
+                _uiState.value = _uiState.value.copy(favoriteStations = favorites)
             }
         }
     }
@@ -230,6 +248,9 @@ class RadioViewModel(
     fun selectStation(station: Station) {
         _uiState.value = _uiState.value.copy(currentStation = station, isMenuOpen = false)
         radioPlayer.play(station)
+        viewModelScope.launch {
+            favoritesRepository.saveLastStation(station)
+        }
     }
 
     fun togglePlayStop() {
