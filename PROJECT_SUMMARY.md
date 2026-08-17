@@ -23,6 +23,7 @@ This document provides a high-level overview of all the major improvements, fixe
 - **State Persistence**: The app now remembers the last tab you were on and the last station you selected, even after closing and reopening the app.
 
 ## 5. UI/UX & Adaptive Design
+- **Android Auto Support**: Integrated the app with Android Auto, allowing you to browse and play your favorite and premium stations directly from your car's screen.
 - **Logo Integration**: Station favicons are displayed in lists and in the center of the **Rotating Tuning Dial**.
 - **Information Panel**: Detailed view for Website, Bitrate, and Stream URL.
 - **Utility Features**: Added a **Copy to Clipboard** button for stream URLs and an **About Dialog** for version info.

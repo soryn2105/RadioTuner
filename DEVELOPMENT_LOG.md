@@ -65,6 +65,11 @@ This document summarizes the changes, fixes, and architectural adjustments made 
 - **Editability**: Enabled editing (pencil icon) for Premium stations. Modified values are saved locally and override defaults.
 - **Verified Streams**: Updated **Radio Prahova** (320kbps SSL) and the **Capital FM** network (Dance, Manele, Etno) with direct, high-quality SSL links.
 
-## 12. Search Optimization (Full Results)
-- **Station Count**: Disabled aggressive auto-validation that was hiding 60% of Romanian stations.
-- **Limit Increase**: Increased search limit to 100 stations per page to reach the full ~1000+ Romanian station database faster.
+## 13. Android Auto Integration (MediaLibraryService)
+- **Motivation**: Allow users to browse and play radio stations directly from their car's dashboard.
+- **Implementation**:
+    - **Upgraded Service**: Converted `PlaybackService` from a simple `MediaSessionService` to a full `MediaLibraryService`.
+    - **Library Browsing**: Implemented `onGetLibraryRoot` and `onGetChildren` to provide two main folders in the car UI: **"Favorite"** and **"România"**.
+    - **Metadata Mapping**: Mapped domain `Station` objects to `MediaItem` with proper titles, subtitles (genres), and icons.
+    - **Auto Configuration**: Added `automotive_app_desc.xml` and necessary `<meta-data>` and `<intent-filter>` in `AndroidManifest.xml`.
+- **Result**: The app is now compatible with Android Auto, showing curated and favorite stations on supported car displays.
