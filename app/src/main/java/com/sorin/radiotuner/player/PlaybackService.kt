@@ -1,5 +1,6 @@
 package com.sorin.radiotuner.player
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
 import androidx.annotation.OptIn
@@ -16,6 +17,7 @@ import androidx.media3.session.SessionError
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.sorin.radiotuner.MainActivity
 import com.sorin.radiotuner.RadioTunerApplication
 import com.sorin.radiotuner.data.model.Station
 import kotlinx.coroutines.CoroutineScope
@@ -29,9 +31,6 @@ import kotlinx.coroutines.launch
  * (RO)
  * Serviciu de fundal care permite integrarea cu Android Auto.
  * Implementează MediaLibraryService pentru a permite mașinii să răsfoiască posturile.
- * (EN)
- * Background service that enables Android Auto integration.
- * Implements MediaLibraryService to allow the car to browse stations.
  */
 class PlaybackService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
@@ -55,7 +54,16 @@ class PlaybackService : MediaLibraryService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
 
-        mediaLibrarySession = MediaLibrarySession.Builder(this, player, LibraryCallback()).build()
+        // (RO) Cream un PendingIntent pentru ca mașina să poată deschide aplicația pe telefon
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        mediaLibrarySession = MediaLibrarySession.Builder(this, player, LibraryCallback())
+            .setSessionActivity(pendingIntent)
+            .build()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
@@ -173,7 +181,6 @@ class PlaybackService : MediaLibraryService() {
         super.onDestroy()
     }
 
-    // Simple SettableFuture helper
     private class SettableFuture<T> : com.google.common.util.concurrent.AbstractFuture<T>() {
         public override fun set(value: T): Boolean = super.set(value)
         public override fun setException(throwable: Throwable): Boolean = super.setException(throwable)
