@@ -145,6 +145,35 @@ class PlaybackService : MediaLibraryService() {
                 else -> Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
             }
         }
+
+        override fun onAddMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>
+        ): ListenableFuture<MutableList<MediaItem>> {
+            val future = SettableFuture<MutableList<MediaItem>>()
+            serviceScope.launch {
+                val resolvedItems = mediaItems.map { item ->
+                    // (RO) Căutăm stația în repository pentru a obține URL-ul și metadatele complete
+                    findStationById(item.mediaId)?.toMediaItem() ?: item
+                }.toMutableList()
+                future.set(resolvedItems)
+            }
+            return future
+        }
+    }
+
+    /**
+     * (RO) Căută un post după ID în toate sursele disponibile (Premium și Favorite).
+     */
+    private suspend fun findStationById(id: String): Station? {
+        val container = (application as RadioTunerApplication).container
+        // 1. Căutăm în Premium
+        val premium = container.stationRepository.getCuratedStations().find { it.id == id }
+        if (premium != null) return premium
+        
+        // 2. Căutăm în Favorite
+        return container.favoritesRepository.observeFavorites().first().find { it.id == id }
     }
 
     private fun Station.toMediaItem(): MediaItem {
