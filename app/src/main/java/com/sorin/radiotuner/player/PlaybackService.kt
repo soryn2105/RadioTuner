@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.sorin.radiotuner.MainActivity
 import com.sorin.radiotuner.RadioTunerApplication
 import com.sorin.radiotuner.data.model.Station
+import com.sorin.radiotuner.data.network.CuratedRomanianStations
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,7 +37,7 @@ import kotlinx.coroutines.launch
  * (RO)
  * Serviciu de fundal care permite integrarea cu Android Auto.
  * Implementează MediaLibraryService pentru a permite mașinii să răsfoiască posturile
- * și să afișeze informații detaliate (RDS, nume artist/melodie).
+ * și să afișeze informații detaliate.
  */
 class PlaybackService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
@@ -45,7 +46,7 @@ class PlaybackService : MediaLibraryService() {
     companion object {
         private const val ROOT_ID = "[root]"
         private const val FAVORITES_ID = "[favorites]"
-        private const val PREMIUM_ID = "[premium]"
+        private const val STATIONS_ID = "[stations]" // (RO) Înlocuim Premium cu o rubrică generală
         private const val CUSTOM_COMMAND_TOGGLE_FAVORITE = "com.sorin.radiotuner.TOGGLE_FAVORITE"
     }
 
@@ -90,7 +91,7 @@ class PlaybackService : MediaLibraryService() {
                         .setIsBrowsable(true)
                         .setIsPlayable(false)
                         .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-                        .setTitle("Radio Tuner")
+                        .setTitle("Amber Tuner")
                         .build()
                 )
                 .build()
@@ -119,18 +120,18 @@ class PlaybackService : MediaLibraryService() {
                                 .build()
                         )
                         .build()
-                    val premiumFolder = MediaItem.Builder()
-                        .setMediaId(PREMIUM_ID)
+                    val stationsFolder = MediaItem.Builder()
+                        .setMediaId(STATIONS_ID)
                         .setMediaMetadata(
                             MediaMetadata.Builder()
-                                .setTitle("România")
+                                .setTitle("Posturi Radio")
                                 .setIsBrowsable(true)
                                 .setIsPlayable(false)
-                                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS)
+                                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
                                 .build()
                         )
                         .build()
-                    Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(favoritesFolder, premiumFolder), params))
+                    Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(favoritesFolder, stationsFolder), params))
                 }
                 FAVORITES_ID -> {
                     val favoritesRepo = (application as RadioTunerApplication).container.favoritesRepository
@@ -142,14 +143,32 @@ class PlaybackService : MediaLibraryService() {
                     }
                     future
                 }
-                PREMIUM_ID -> {
-                    val stationRepo = (application as RadioTunerApplication).container.stationRepository
-                    val stations = stationRepo.getCuratedStations()
+                STATIONS_ID -> {
+                    // (RO) Folosim lista curated direct pentru a asigura conținut în Android Auto
+                    val stations = CuratedRomanianStations.STATIONS
                     val mediaItems = stations.map { it.toMediaItem() }
                     Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(mediaItems), params))
                 }
                 else -> Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
             }
+        }
+
+        @OptIn(UnstableApi::class)
+        override fun onGetItem(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            mediaId: String
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            val future = SettableFuture<LibraryResult<MediaItem>>()
+            serviceScope.launch {
+                val station = findStationById(mediaId)
+                if (station != null) {
+                    future.set(LibraryResult.ofItem(station.toMediaItem(), null))
+                } else {
+                    future.set(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+                }
+            }
+            return future
         }
 
         override fun onAddMediaItems(
@@ -169,7 +188,11 @@ class PlaybackService : MediaLibraryService() {
 
         @OptIn(UnstableApi::class)
         override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+            // (RO) Asigurăm toate permisiunile necesare pentru răsfoire și control
+            val availableSessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
             val customCommand = SessionCommand(CUSTOM_COMMAND_TOGGLE_FAVORITE, Bundle.EMPTY)
+            availableSessionCommands.add(customCommand)
+
             val customLayout = listOf(
                 CommandButton.Builder()
                     .setDisplayName("Favorite")
@@ -178,11 +201,9 @@ class PlaybackService : MediaLibraryService() {
                     .build()
             )
             session.setCustomLayout(ImmutableList.copyOf(customLayout))
-            
+
             return MediaSession.ConnectionResult.accept(
-                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-                    .add(customCommand)
-                    .build(),
+                availableSessionCommands.build(),
                 MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
             )
         }
@@ -209,8 +230,11 @@ class PlaybackService : MediaLibraryService() {
 
     private suspend fun findStationById(id: String): Station? {
         val container = (application as RadioTunerApplication).container
-        val premium = container.stationRepository.getCuratedStations().find { it.id == id }
+        // 1. Căutăm în Premium
+        val premium = CuratedRomanianStations.STATIONS.find { it.id == id }
         if (premium != null) return premium
+        
+        // 2. Căutăm în Favorite
         return container.favoritesRepository.observeFavorites().first().find { it.id == id }
     }
 
@@ -221,6 +245,7 @@ class PlaybackService : MediaLibraryService() {
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(name)
+                    .setSubtitle(genre)
                     .setArtist(genre)
                     .setAlbumTitle(country)
                     .setIsBrowsable(false)
