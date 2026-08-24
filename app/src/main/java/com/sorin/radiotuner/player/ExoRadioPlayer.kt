@@ -2,6 +2,7 @@ package com.sorin.radiotuner.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
@@ -21,13 +22,6 @@ import com.google.common.util.concurrent.MoreExecutors
 /**
  * (RO)
  * Implementarea RadioPlayer care se conectează la [PlaybackService].
- * Folosește un MediaController pentru a controla playerul care rulează în serviciu,
- * garantând că redarea nu se oprește când ecranul este stins.
- *
- * (EN)
- * RadioPlayer implementation that connects to [PlaybackService].
- * Uses a MediaController to control the player running in the service,
- * guaranteeing that playback does not stop when the screen is off.
  */
 class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
@@ -57,8 +51,6 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            // (RO) Media3 mapează automat metadatele ICY (numele melodiei) în câmpul 'title' sau 'displayTitle'.
-            // Această metodă e mai sigură când folosim MediaController.
             val title = mediaMetadata.title ?: mediaMetadata.displayTitle
             if (!title.isNullOrBlank()) {
                 _rdsInfo.value = RdsInfo(text = title.toString(), isAvailable = true)
@@ -66,7 +58,6 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         }
 
         override fun onMetadata(metadata: Metadata) {
-            // (RO) Fallback pentru metadate brute (IcyInfo)
             for (i in 0 until metadata.length()) {
                 val entry = metadata.get(i)
                 if (entry is IcyInfo) {
@@ -91,11 +82,23 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         _rdsInfo.value = null
         val player = controller
         if (player != null) {
-            player.setMediaItem(MediaItem.fromUri(station.streamUrl))
+            val mediaItem = MediaItem.Builder()
+                .setMediaId(station.id)
+                .setUri(station.streamUrl)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(station.name)
+                        .setArtist(station.genre)
+                        .setAlbumTitle(station.country)
+                        .setArtworkUri(station.imageUrl?.let { Uri.parse(it) })
+                        .build()
+                )
+                .build()
+            
+            player.setMediaItem(mediaItem)
             player.prepare()
             player.playWhenReady = true
         } else {
-            // (RO) Dacă controllerul nu e gata, așteptăm și încercăm din nou
             controllerFuture?.addListener({
                 play(station)
             }, MoreExecutors.directExecutor())

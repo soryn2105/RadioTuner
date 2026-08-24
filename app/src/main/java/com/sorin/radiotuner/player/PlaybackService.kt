@@ -3,17 +3,22 @@ package com.sorin.radiotuner.player
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.CommandButton
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
+import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -30,7 +35,8 @@ import kotlinx.coroutines.launch
 /**
  * (RO)
  * Serviciu de fundal care permite integrarea cu Android Auto.
- * Implementează MediaLibraryService pentru a permite mașinii să răsfoiască posturile.
+ * Implementează MediaLibraryService pentru a permite mașinii să răsfoiască posturile
+ * și să afișeze informații detaliate (RDS, nume artist/melodie).
  */
 class PlaybackService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
@@ -40,6 +46,7 @@ class PlaybackService : MediaLibraryService() {
         private const val ROOT_ID = "[root]"
         private const val FAVORITES_ID = "[favorites]"
         private const val PREMIUM_ID = "[premium]"
+        private const val CUSTOM_COMMAND_TOGGLE_FAVORITE = "com.sorin.radiotuner.TOGGLE_FAVORITE"
     }
 
     override fun onCreate() {
@@ -54,7 +61,6 @@ class PlaybackService : MediaLibraryService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
 
-        // (RO) Cream un PendingIntent pentru ca mașina să poată deschide aplicația pe telefon
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent,
@@ -154,25 +160,57 @@ class PlaybackService : MediaLibraryService() {
             val future = SettableFuture<MutableList<MediaItem>>()
             serviceScope.launch {
                 val resolvedItems = mediaItems.map { item ->
-                    // (RO) Căutăm stația în repository pentru a obține URL-ul și metadatele complete
                     findStationById(item.mediaId)?.toMediaItem() ?: item
                 }.toMutableList()
                 future.set(resolvedItems)
             }
             return future
         }
+
+        @OptIn(UnstableApi::class)
+        override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+            val customCommand = SessionCommand(CUSTOM_COMMAND_TOGGLE_FAVORITE, Bundle.EMPTY)
+            val customLayout = listOf(
+                CommandButton.Builder()
+                    .setDisplayName("Favorite")
+                    .setSessionCommand(customCommand)
+                    .setIconResId(android.R.drawable.btn_star)
+                    .build()
+            )
+            session.setCustomLayout(ImmutableList.copyOf(customLayout))
+            
+            return MediaSession.ConnectionResult.accept(
+                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                    .add(customCommand)
+                    .build(),
+                MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
+            )
+        }
+
+        @OptIn(UnstableApi::class)
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == CUSTOM_COMMAND_TOGGLE_FAVORITE) {
+                serviceScope.launch {
+                    val currentItem = session.player.currentMediaItem ?: return@launch
+                    val station = findStationById(currentItem.mediaId) ?: return@launch
+                    val favoritesRepo = (application as RadioTunerApplication).container.favoritesRepository
+                    favoritesRepo.toggleFavorite(station)
+                }
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+        }
     }
 
-    /**
-     * (RO) Căută un post după ID în toate sursele disponibile (Premium și Favorite).
-     */
     private suspend fun findStationById(id: String): Station? {
         val container = (application as RadioTunerApplication).container
-        // 1. Căutăm în Premium
         val premium = container.stationRepository.getCuratedStations().find { it.id == id }
         if (premium != null) return premium
-        
-        // 2. Căutăm în Favorite
         return container.favoritesRepository.observeFavorites().first().find { it.id == id }
     }
 
@@ -183,7 +221,8 @@ class PlaybackService : MediaLibraryService() {
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(name)
-                    .setSubtitle(genre)
+                    .setArtist(genre)
+                    .setAlbumTitle(country)
                     .setIsBrowsable(false)
                     .setIsPlayable(true)
                     .setMediaType(MediaMetadata.MEDIA_TYPE_RADIO_STATION)
