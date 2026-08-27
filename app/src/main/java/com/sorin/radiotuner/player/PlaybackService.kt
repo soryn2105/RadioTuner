@@ -31,18 +31,22 @@ import kotlinx.coroutines.flow.first
 
 /**
  * (RO)
- * Serviciu de fundal care permite integrarea cu Android Auto.
+ * Serviciu de fundal optimizat pentru Android Auto.
  * Implementează MediaLibraryService pentru a permite mașinii să răsfoiască posturile
- * și să afișeze informații detaliate (RDS, nume artist/melodie).
+ * din toată lumea, să caute și să afișeze metadate complete pe bord.
  */
 class PlaybackService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    
+    // (RO) Reținem rezultatele ultimei căutări globale pentru Android Auto
+    private var lastSearchResults = listOf<Station>()
 
     companion object {
         private const val ROOT_ID = "[root]"
         private const val FAVORITES_ID = "[favorites]"
-        private const val STATIONS_ID = "[stations]"
+        private const val COUNTRIES_ID = "[countries]"
+        private const val SEARCH_RESULTS_ID = "[search_results]"
         private const val CUSTOM_COMMAND_TOGGLE_FAVORITE = "com.sorin.radiotuner.TOGGLE_FAVORITE"
     }
 
@@ -68,6 +72,13 @@ class PlaybackService : MediaLibraryService() {
         mediaLibrarySession = MediaLibrarySession.Builder(this, player, LibraryCallback())
             .setSessionActivity(pendingIntent)
             .build()
+            
+        // (RO) Listener pentru a menține sincronizarea metadatelor RDS cu bordul mașinii
+        player.addListener(object : Player.Listener {
+            override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                // (RO) Media3 gestionează automat trimiterea noilor titluri (RDS) către Android Auto
+            }
+        })
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
@@ -88,7 +99,7 @@ class PlaybackService : MediaLibraryService() {
                         .setIsBrowsable(true)
                         .setIsPlayable(false)
                         .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-                        .setTitle("Amber Tuner")
+                        .setTitle("Amber Tuner Global")
                         .build()
                 )
                 .build()
@@ -104,55 +115,93 @@ class PlaybackService : MediaLibraryService() {
             pageSize: Int,
             params: LibraryParams?
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-            return when (parentId) {
-                ROOT_ID -> {
+            val container = (application as RadioTunerApplication).container
+            
+            return when {
+                parentId == ROOT_ID -> {
                     val folders = listOf(
-                        MediaItem.Builder()
-                            .setMediaId(FAVORITES_ID)
-                            .setMediaMetadata(
-                                MediaMetadata.Builder()
-                                    .setTitle("Favorite")
-                                    .setIsBrowsable(true)
-                                    .setIsPlayable(false)
-                                    .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS)
-                                    .build()
-                            )
-                            .build(),
-                        MediaItem.Builder()
-                            .setMediaId(STATIONS_ID)
-                            .setMediaMetadata(
-                                MediaMetadata.Builder()
-                                    .setTitle("Posturi Radio")
-                                    .setIsBrowsable(true)
-                                    .setIsPlayable(false)
-                                    .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-                                    .build()
-                            )
-                            .build()
+                        createFolder(FAVORITES_ID, "⭐ Favoritele Mele", MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS),
+                        createFolder(COUNTRIES_ID, "🌎 Răsfoiește după Țară", MediaMetadata.MEDIA_TYPE_FOLDER_MIXED),
+                        createFolder(SEARCH_RESULTS_ID, "🔍 Rezultate Căutare", MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
                     )
                     Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(folders), params))
                 }
-                FAVORITES_ID -> {
-                    val favoritesRepo = (application as RadioTunerApplication).container.favoritesRepository
+                parentId == FAVORITES_ID -> {
                     val future = SettableFuture<LibraryResult<ImmutableList<MediaItem>>>()
                     serviceScope.launch {
-                        try {
-                            val stations = favoritesRepo.observeFavorites().first()
-                            val mediaItems = stations.map { it.toMediaItem() }
-                            future.set(LibraryResult.ofItemList(ImmutableList.copyOf(mediaItems), params))
-                        } catch (e: Exception) {
-                            future.set(LibraryResult.ofError(SessionError.ERROR_IO))
-                        }
+                        val stations = container.favoritesRepository.observeFavorites().first()
+                        future.set(LibraryResult.ofItemList(ImmutableList.copyOf(stations.map { it.toMediaItem() }), params))
                     }
                     future
                 }
-                STATIONS_ID -> {
-                    val stations = CuratedRomanianStations.STATIONS
-                    val mediaItems = stations.map { it.toMediaItem() }
-                    Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(mediaItems), params))
+                parentId == COUNTRIES_ID -> {
+                    val future = SettableFuture<LibraryResult<ImmutableList<MediaItem>>>()
+                    serviceScope.launch {
+                        container.stationRepository.listCountries().onSuccess { countries ->
+                            val items = countries.take(100).map { country ->
+                                MediaItem.Builder()
+                                    .setMediaId("[country]${country.name}")
+                                    .setMediaMetadata(
+                                        MediaMetadata.Builder()
+                                            .setTitle(country.name)
+                                            .setSubtitle("${country.stationCount} posturi disponibile")
+                                            .setIsBrowsable(true)
+                                            .setIsPlayable(false)
+                                            .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                                            .build()
+                                    ).build()
+                            }
+                            future.set(LibraryResult.ofItemList(ImmutableList.copyOf(items), params))
+                        }.onFailure { future.set(LibraryResult.ofError(SessionError.ERROR_IO)) }
+                    }
+                    future
+                }
+                parentId.startsWith("[country]") -> {
+                    val countryName = parentId.removePrefix("[country]")
+                    val future = SettableFuture<LibraryResult<ImmutableList<MediaItem>>>()
+                    serviceScope.launch {
+                        container.stationRepository.search("", countryName, null, null, 0).onSuccess { stations ->
+                            future.set(LibraryResult.ofItemList(ImmutableList.copyOf(stations.map { it.toMediaItem() }), params))
+                        }.onFailure { future.set(LibraryResult.ofError(SessionError.ERROR_IO)) }
+                    }
+                    future
+                }
+                parentId == SEARCH_RESULTS_ID -> {
+                    Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(lastSearchResults.map { it.toMediaItem() }), params))
                 }
                 else -> Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
             }
+        }
+
+        @OptIn(UnstableApi::class)
+        override fun onSearch(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<Void>> {
+            val container = (application as RadioTunerApplication).container
+            serviceScope.launch {
+                // (RO) Căutare globală în toată lumea (fără filtru de țară)
+                container.stationRepository.search(query, null, null, null, 0).onSuccess { stations ->
+                    lastSearchResults = stations
+                    session.notifySearchResultChanged(browser, query, stations.size, params)
+                }
+            }
+            return Futures.immediateFuture(LibraryResult.ofVoid())
+        }
+
+        @OptIn(UnstableApi::class)
+        override fun onGetSearchResult(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            val items = lastSearchResults.map { it.toMediaItem() }
+            return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(items), params))
         }
 
         @OptIn(UnstableApi::class)
@@ -214,6 +263,8 @@ class PlaybackService : MediaLibraryService() {
                 .add(Player.COMMAND_SET_MEDIA_ITEM)
                 .add(Player.COMMAND_PLAY_PAUSE)
                 .add(Player.COMMAND_STOP)
+                .add(Player.COMMAND_GET_TIMELINE)
+                .add(Player.COMMAND_GET_CURRENT_MEDIA_ITEM)
                 .build()
 
             return MediaSession.ConnectionResult.accept(availableSessionCommands.build(), playerCommands)
@@ -237,37 +288,28 @@ class PlaybackService : MediaLibraryService() {
             }
             return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         }
-
-        @OptIn(UnstableApi::class)
-        override fun onPlaybackResumption(
-            mediaSession: MediaSession,
-            controller: MediaSession.ControllerInfo
-        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            val future = SettableFuture<MediaSession.MediaItemsWithStartPosition>()
-            serviceScope.launch {
-                val favoritesRepo = (application as RadioTunerApplication).container.favoritesRepository
-                val lastStation = favoritesRepo.observeLastStation().first()
-                if (lastStation != null) {
-                    future.set(MediaSession.MediaItemsWithStartPosition(listOf(lastStation.toMediaItem()), 0, 0))
-                } else {
-                    future.setException(UnsupportedOperationException())
-                }
-            }
-            return future
-        }
     }
 
     private suspend fun findStationById(id: String): Station? {
         val container = (application as RadioTunerApplication).container
-        val premium = CuratedRomanianStations.STATIONS.find { it.id == id }
-        if (premium != null) return premium
-        return container.favoritesRepository.observeFavorites().first().find { it.id == id }
+        
+        // 1. Căutăm în favorite
+        val favorite = container.favoritesRepository.observeFavorites().first().find { it.id == id }
+        if (favorite != null) return favorite
+        
+        // 2. Căutăm în lista de bază
+        val curated = CuratedRomanianStations.STATIONS.find { it.id == id }
+        if (curated != null) return curated
+        
+        // 3. Căutăm în ultimele rezultate de căutare
+        return lastSearchResults.find { it.id == id }
     }
 
     private fun Station.toMediaItem(): MediaItem {
+        // (RO) Metadate bogate pentru afișare pe bordul mașinii
         val metadata = MediaMetadata.Builder()
             .setTitle(name)
-            .setSubtitle(genre)
+            .setSubtitle("$genre · $country")
             .setArtist(genre)
             .setAlbumTitle(country)
             .setDisplayTitle(name)
@@ -275,6 +317,10 @@ class PlaybackService : MediaLibraryService() {
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .setArtworkUri(imageUrl?.let { Uri.parse(it) })
+            .setExtras(Bundle().apply {
+                putString("bitrate", if (bitrate != null) "$bitrate kbps" else "Nespecificat")
+                putString("homepage", homepage)
+            })
             .build()
 
         return MediaItem.Builder()
@@ -282,6 +328,19 @@ class PlaybackService : MediaLibraryService() {
             .setUri(streamUrl)
             .setMediaMetadata(metadata)
             .build()
+    }
+
+    private fun createFolder(id: String, title: String, type: Int): MediaItem {
+        return MediaItem.Builder()
+            .setMediaId(id)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setIsBrowsable(true)
+                    .setIsPlayable(false)
+                    .setMediaType(type)
+                    .build()
+            ).build()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
