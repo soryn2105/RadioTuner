@@ -33,13 +33,12 @@ import kotlinx.coroutines.flow.first
  * (RO)
  * Serviciu de fundal optimizat pentru Android Auto.
  * Implementează MediaLibraryService pentru a permite mașinii să răsfoiască posturile
- * din toată lumea, să caute și să afișeze metadate complete pe bord.
+ * și să afișeze informații detaliate (RDS, nume artist/melodie).
  */
 class PlaybackService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
-    // (RO) Reținem rezultatele ultimei căutări globale pentru Android Auto
     private var lastSearchResults = listOf<Station>()
 
     companion object {
@@ -73,10 +72,12 @@ class PlaybackService : MediaLibraryService() {
             .setSessionActivity(pendingIntent)
             .build()
             
-        // (RO) Listener pentru a menține sincronizarea metadatelor RDS cu bordul mașinii
         player.addListener(object : Player.Listener {
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                // (RO) Media3 gestionează automat trimiterea noilor titluri (RDS) către Android Auto
+                // (RO) Când metadatele RDS (ICY) se schimbă, notificăm sesiunea
+                // pentru a asigura actualizarea bordului mașinii.
+                mediaLibrarySession?.notifyChildrenChanged(SEARCH_RESULTS_ID, 0, null)
+                mediaLibrarySession?.notifyChildrenChanged(FAVORITES_ID, 0, null)
             }
         })
     }
@@ -144,7 +145,7 @@ class PlaybackService : MediaLibraryService() {
                                     .setMediaMetadata(
                                         MediaMetadata.Builder()
                                             .setTitle(country.name)
-                                            .setSubtitle("${country.stationCount} posturi disponibile")
+                                            .setSubtitle("${country.stationCount} posturi")
                                             .setIsBrowsable(true)
                                             .setIsPlayable(false)
                                             .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
@@ -182,7 +183,6 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<Void>> {
             val container = (application as RadioTunerApplication).container
             serviceScope.launch {
-                // (RO) Căutare globală în toată lumea (fără filtru de țară)
                 container.stationRepository.search(query, null, null, null, 0).onSuccess { stations ->
                     lastSearchResults = stations
                     session.notifySearchResultChanged(browser, query, stations.size, params)
@@ -288,25 +288,36 @@ class PlaybackService : MediaLibraryService() {
             }
             return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         }
+
+        @OptIn(UnstableApi::class)
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            val future = SettableFuture<MediaSession.MediaItemsWithStartPosition>()
+            serviceScope.launch {
+                val favoritesRepo = (application as RadioTunerApplication).container.favoritesRepository
+                val lastStation = favoritesRepo.observeLastStation().first()
+                if (lastStation != null) {
+                    future.set(MediaSession.MediaItemsWithStartPosition(listOf(lastStation.toMediaItem()), 0, 0))
+                } else {
+                    future.setException(UnsupportedOperationException())
+                }
+            }
+            return future
+        }
     }
 
     private suspend fun findStationById(id: String): Station? {
         val container = (application as RadioTunerApplication).container
-        
-        // 1. Căutăm în favorite
         val favorite = container.favoritesRepository.observeFavorites().first().find { it.id == id }
         if (favorite != null) return favorite
-        
-        // 2. Căutăm în lista de bază
         val curated = CuratedRomanianStations.STATIONS.find { it.id == id }
         if (curated != null) return curated
-        
-        // 3. Căutăm în ultimele rezultate de căutare
         return lastSearchResults.find { it.id == id }
     }
 
     private fun Station.toMediaItem(): MediaItem {
-        // (RO) Metadate bogate pentru afișare pe bordul mașinii
         val metadata = MediaMetadata.Builder()
             .setTitle(name)
             .setSubtitle("$genre · $country")
@@ -317,10 +328,6 @@ class PlaybackService : MediaLibraryService() {
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .setArtworkUri(imageUrl?.let { Uri.parse(it) })
-            .setExtras(Bundle().apply {
-                putString("bitrate", if (bitrate != null) "$bitrate kbps" else "Nespecificat")
-                putString("homepage", homepage)
-            })
             .build()
 
         return MediaItem.Builder()
