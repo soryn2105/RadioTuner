@@ -51,15 +51,23 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            // (RO) Media3 mapează metadatele ICY (numele melodiei) în câmpul 'title'.
+            // (RO) Captăm Artistul și Titlul pentru RDS (numele melodiei)
+            val artist = mediaMetadata.artist
             val title = mediaMetadata.title ?: mediaMetadata.displayTitle
-            if (!title.isNullOrBlank()) {
-                _rdsInfo.value = RdsInfo(text = title.toString(), isAvailable = true)
+            
+            val rdsText = when {
+                !artist.isNullOrBlank() && !title.isNullOrBlank() -> "$artist - $title"
+                !title.isNullOrBlank() -> title.toString()
+                else -> ""
+            }
+
+            if (rdsText.isNotBlank()) {
+                _rdsInfo.value = RdsInfo(text = rdsText, isAvailable = true)
             }
         }
 
         override fun onMetadata(metadata: Metadata) {
-            // (RO) Suport suplimentar pentru stream-uri care trimit IcyInfo direct.
+            // Suport fallback pentru stream-uri ICY vechi
             for (i in 0 until metadata.length()) {
                 val entry = metadata.get(i)
                 if (entry is IcyInfo) {
@@ -109,7 +117,7 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun stop() {
         val player = controller ?: return
-        // (RO) Oprim playerul definitiv și curățăm lista de redare.
+        // (RO) Oprire forțată: pauză + stop + curățare coadă
         player.playWhenReady = false
         player.stop()
         player.clearMediaItems()
