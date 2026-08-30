@@ -25,28 +25,25 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.sorin.radiotuner.MainActivity
 import com.sorin.radiotuner.RadioTunerApplication
 import com.sorin.radiotuner.data.model.Station
-import com.sorin.radiotuner.data.network.CuratedRomanianStations
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
 /**
  * (RO)
  * Serviciu de fundal optimizat pentru Android Auto.
- * Implementează MediaLibraryService pentru a permite mașinii să răsfoiască posturile
- * și să afișeze informații detaliate (RDS, nume artist/melodie).
+ * Implementează MediaLibraryService pentru a asigura sincronizarea completă cu aplicația de telefon.
  */
 class PlaybackService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
-    // (RO) Cache pentru posturile descoperite prin navigare/căutare pentru a permite redarea lor
-    private val discoveredStations = mutableMapOf<String, Station>()
+    private val stationCache = mutableMapOf<String, Station>()
 
     companion object {
         private const val ROOT_ID = "[root]"
         private const val FAVORITES_ID = "[favorites]"
         private const val COUNTRIES_ID = "[countries]"
-        private const val SEARCH_RESULTS_ID = "[search_results]"
+        private const val SEARCH_ID = "[search]"
         private const val CUSTOM_COMMAND_TOGGLE_FAVORITE = "com.sorin.radiotuner.TOGGLE_FAVORITE"
     }
 
@@ -63,6 +60,14 @@ class PlaybackService : MediaLibraryService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
 
+        player.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_IDLE && !player.playWhenReady && player.mediaItemCount == 0) {
+                    stopSelf()
+                }
+            }
+        })
+
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent,
@@ -72,15 +77,6 @@ class PlaybackService : MediaLibraryService() {
         mediaLibrarySession = MediaLibrarySession.Builder(this, player, LibraryCallback())
             .setSessionActivity(pendingIntent)
             .build()
-            
-        // (RO) Listener pentru RDS (Metadate dinamice)
-        player.addListener(object : Player.Listener {
-            override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                // (RO) Când postul schimbă piesa, Media3 actualizează automat sesiunea.
-                // Notificăm mașina că "ceva s-a schimbat" pentru a reîmprospăta ecranele de listă dacă e cazul.
-                mediaLibrarySession?.notifyChildrenChanged(SEARCH_RESULTS_ID, 0, null)
-            }
-        })
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
@@ -124,7 +120,7 @@ class PlaybackService : MediaLibraryService() {
                     val folders = listOf(
                         createFolder(FAVORITES_ID, "⭐ Favoritele Mele", MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS),
                         createFolder(COUNTRIES_ID, "🌎 Răsfoiește după Țară", MediaMetadata.MEDIA_TYPE_FOLDER_MIXED),
-                        createFolder(SEARCH_RESULTS_ID, "🔍 Rezultate Căutare", MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                        createFolder(SEARCH_ID, "🔍 Căutare Globală", MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
                     )
                     Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(folders), params))
                 }
@@ -132,7 +128,7 @@ class PlaybackService : MediaLibraryService() {
                     val future = SettableFuture<LibraryResult<ImmutableList<MediaItem>>>()
                     serviceScope.launch {
                         val stations = container.favoritesRepository.observeFavorites().first()
-                        stations.forEach { discoveredStations[it.id] = it }
+                        stations.forEach { stationCache[it.id] = it }
                         future.set(LibraryResult.ofItemList(ImmutableList.copyOf(stations.map { it.toMediaItem() }), params))
                     }
                     future
@@ -164,16 +160,11 @@ class PlaybackService : MediaLibraryService() {
                     val future = SettableFuture<LibraryResult<ImmutableList<MediaItem>>>()
                     serviceScope.launch {
                         container.stationRepository.search("", countryName, null, null, 0).onSuccess { stations ->
-                            stations.forEach { discoveredStations[it.id] = it }
+                            stations.forEach { stationCache[it.id] = it }
                             future.set(LibraryResult.ofItemList(ImmutableList.copyOf(stations.map { it.toMediaItem() }), params))
                         }.onFailure { future.set(LibraryResult.ofError(SessionError.ERROR_IO)) }
                     }
                     future
-                }
-                parentId == SEARCH_RESULTS_ID -> {
-                    // (RO) Rezultatele sunt populate prin functia onSearch de mai jos
-                    val items = discoveredStations.values.filter { it.id.startsWith("search-") }.map { it.toMediaItem() }
-                    Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(items), params))
                 }
                 else -> Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
             }
@@ -189,12 +180,7 @@ class PlaybackService : MediaLibraryService() {
             val container = (application as RadioTunerApplication).container
             serviceScope.launch {
                 container.stationRepository.search(query, null, null, null, 0).onSuccess { stations ->
-                    // Curățăm vechile rezultate de căutare din cache și punem cele noi
-                    discoveredStations.keys.removeIf { it.startsWith("search-") }
-                    stations.forEach { 
-                        val newId = "search-${it.id}"
-                        discoveredStations[newId] = it.copy(id = newId) 
-                    }
+                    stations.forEach { stationCache[it.id] = it }
                     session.notifySearchResultChanged(browser, query, stations.size, params)
                 }
             }
@@ -210,25 +196,11 @@ class PlaybackService : MediaLibraryService() {
             pageSize: Int,
             params: LibraryParams?
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-            val items = discoveredStations.values
-                .filter { it.id.startsWith("search-") }
-                .map { it.toMediaItem() }
-            return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(items), params))
-        }
-
-        @OptIn(UnstableApi::class)
-        override fun onGetItem(
-            session: MediaLibrarySession,
-            browser: MediaSession.ControllerInfo,
-            mediaId: String
-        ): ListenableFuture<LibraryResult<MediaItem>> {
-            val future = SettableFuture<LibraryResult<MediaItem>>()
+            val container = (application as RadioTunerApplication).container
+            val future = SettableFuture<LibraryResult<ImmutableList<MediaItem>>>()
             serviceScope.launch {
-                val station = findStationById(mediaId)
-                if (station != null) {
-                    future.set(LibraryResult.ofItem(station.toMediaItem(), null))
-                } else {
-                    future.set(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+                container.stationRepository.search(query, null, null, null, 0).onSuccess { stations ->
+                    future.set(LibraryResult.ofItemList(ImmutableList.copyOf(stations.map { it.toMediaItem() }), params))
                 }
             }
             return future
@@ -276,7 +248,6 @@ class PlaybackService : MediaLibraryService() {
                 .add(Player.COMMAND_PLAY_PAUSE)
                 .add(Player.COMMAND_STOP)
                 .add(Player.COMMAND_GET_TIMELINE)
-                .add(Player.COMMAND_GET_CURRENT_MEDIA_ITEM)
                 .build()
 
             return MediaSession.ConnectionResult.accept(availableSessionCommands.build(), playerCommands)
@@ -300,42 +271,13 @@ class PlaybackService : MediaLibraryService() {
             }
             return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         }
-
-        @OptIn(UnstableApi::class)
-        override fun onPlaybackResumption(
-            mediaSession: MediaSession,
-            controller: MediaSession.ControllerInfo
-        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            val future = SettableFuture<MediaSession.MediaItemsWithStartPosition>()
-            serviceScope.launch {
-                val favoritesRepo = (application as RadioTunerApplication).container.favoritesRepository
-                val lastStation = favoritesRepo.observeLastStation().first()
-                if (lastStation != null) {
-                    future.set(MediaSession.MediaItemsWithStartPosition(listOf(lastStation.toMediaItem()), 0, 0))
-                } else {
-                    future.setException(UnsupportedOperationException())
-                }
-            }
-            return future
-        }
     }
 
     private suspend fun findStationById(id: String): Station? {
         val container = (application as RadioTunerApplication).container
-        
-        // Căutăm în ID-urile rezolvate (pentru AA)
-        val cleanId = id.removePrefix("search-")
-        
-        // 1. Căutăm în cache-ul de descoperire (cel mai rapid)
-        val cached = discoveredStations[id] ?: discoveredStations[cleanId]
+        val cached = stationCache[id]
         if (cached != null) return cached
-
-        // 2. Căutăm în favorite
-        val favorite = container.favoritesRepository.observeFavorites().first().find { it.id == cleanId }
-        if (favorite != null) return favorite
-        
-        // 3. Căutăm în lista de bază
-        return CuratedRomanianStations.STATIONS.find { it.id == cleanId }
+        return container.favoritesRepository.observeFavorites().first().find { it.id == id }
     }
 
     private fun Station.toMediaItem(): MediaItem {
