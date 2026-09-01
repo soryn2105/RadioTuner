@@ -53,21 +53,21 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            // (RO) Extragem informațiile de tip RDS (Artist - Melodie)
-            // Media3 mapează automat metadatele ICY (Shoutcast/Icecast) aici.
+            // (RO) Captăm metadatele dinamice (RDS)
             val title = mediaMetadata.title ?: mediaMetadata.displayTitle
             val artist = mediaMetadata.artist
             
-            // Verificăm dacă metadatele sunt diferite de numele postului (pentru a afișa RDS real)
             val stationName = currentStation?.name ?: ""
-            val isDynamicInfo = !title.isNullOrBlank() && 
-                               title.toString().trim().lowercase() != stationName.lowercase().trim()
+            
+            // Verificăm dacă informația primită este diferită de numele postului (pentru a fi un RDS valid)
+            val isDynamic = !title.isNullOrBlank() && 
+                           title.toString().trim().lowercase() != stationName.lowercase().trim()
 
-            if (isDynamicInfo) {
+            if (isDynamic) {
                 val rdsText = if (!artist.isNullOrBlank()) "$artist - $title" else title.toString()
                 _rdsInfo.value = RdsInfo(text = rdsText, isAvailable = true)
             } else {
-                // Revenim la info despre post dacă nu avem metadate dinamice (ex: în timpul reclamelor sau jingle-urilor)
+                // Dacă nu avem metadate dinamice (ex: în pauză), afișăm info despre post
                 currentStation?.let {
                     _rdsInfo.value = RdsInfo(text = "${it.name} (${it.genre})", isAvailable = true)
                 }
@@ -75,7 +75,6 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         }
 
         override fun onMetadata(metadata: Metadata) {
-            // (RO) Fallback pentru stream-uri care trimit IcyInfo direct fără a fi mapate în MediaMetadata
             for (i in 0 until metadata.length()) {
                 val entry = metadata.get(i)
                 if (entry is IcyInfo) {
@@ -98,19 +97,17 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun play(station: Station) {
         currentStation = station
-        // (RO) Afișăm inițial numele postului până când stream-ul trimite RDS-ul real
+        // Resetăm rdsInfo la valorile de bază ale postului pentru pornire imediată
         _rdsInfo.value = RdsInfo(text = "${station.name} (${station.genre})", isAvailable = true)
         
         val player = controller
         if (player != null) {
-            // (RO) Configurăm MediaItem-ul. IMPORTANT: Nu setăm Artist/Title în metadata-ul inițial
-            // pentru a nu "polua" listenerul onMediaMetadataChanged cu date statice.
             val mediaItem = MediaItem.Builder()
                 .setMediaId(station.id)
                 .setUri(station.streamUrl)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
-                        // Setăm doar artwork-ul și albumul (țara), lăsăm Titlul/Artistul să fie populate de RDS
+                        // NU setăm Titlul aici pentru a nu bloca RDS-ul dinamic
                         .setAlbumTitle(station.country)
                         .setArtworkUri(station.imageUrl?.let { Uri.parse(it) })
                         .build()
@@ -129,6 +126,7 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun stop() {
         val player = controller ?: return
+        // (RO) Secvență de oprire forțată pentru a închide și serviciul
         player.playWhenReady = false
         player.stop()
         player.clearMediaItems()

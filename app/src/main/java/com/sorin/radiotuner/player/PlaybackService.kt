@@ -252,7 +252,6 @@ class PlaybackService : MediaLibraryService() {
                 .add(Player.COMMAND_SET_MEDIA_ITEM)
                 .add(Player.COMMAND_PLAY_PAUSE)
                 .add(Player.COMMAND_STOP)
-                .add(Player.COMMAND_GET_TIMELINE)
                 .build()
 
             return MediaSession.ConnectionResult.accept(availableSessionCommands.build(), playerCommands)
