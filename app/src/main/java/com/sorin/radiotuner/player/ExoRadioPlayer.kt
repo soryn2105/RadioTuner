@@ -33,6 +33,8 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     private val _rdsInfo = MutableStateFlow<RdsInfo?>(null)
     override val rdsInfo: StateFlow<RdsInfo?> = _rdsInfo.asStateFlow()
+    
+    private var currentStation: Station? = null
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(state: Int) {
@@ -47,7 +49,7 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
         override fun onPlayerError(error: PlaybackException) {
             _playbackState.value = PlaybackState.Error(error.message ?: "Eroare de redare necunoscută")
-            _rdsInfo.value = RdsInfo(text = "", isAvailable = false)
+            _rdsInfo.value = RdsInfo(text = "Eroare de conexiune", isAvailable = true)
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
@@ -58,6 +60,11 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
             if (!title.isNullOrBlank()) {
                 val text = if (!artist.isNullOrBlank()) "$artist - $title" else title.toString()
                 _rdsInfo.value = RdsInfo(text = text, isAvailable = true)
+            } else {
+                // Dacă nu avem metadate dinamice noi, revenim la info despre post
+                currentStation?.let {
+                    _rdsInfo.value = RdsInfo(text = "${it.name} (${it.genre})", isAvailable = true)
+                }
             }
         }
 
@@ -83,7 +90,10 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
     }
 
     override fun play(station: Station) {
-        _rdsInfo.value = null
+        currentStation = station
+        // (RO) Setăm imediat informația despre post pentru a evita mesajul "Stopped"
+        _rdsInfo.value = RdsInfo(text = "${station.name} (${station.genre})", isAvailable = true)
+        
         val player = controller
         if (player != null) {
             val mediaItem = MediaItem.Builder()
@@ -115,7 +125,8 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         player.stop()
         player.clearMediaItems()
         _playbackState.value = PlaybackState.Idle
-        _rdsInfo.value = null
+        _rdsInfo.value = null // Aici va apărea "Stopped" corect, pentru că redarea s-a terminat
+        currentStation = null
     }
 
     override fun release() {
