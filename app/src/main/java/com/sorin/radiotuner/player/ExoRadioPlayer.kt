@@ -22,7 +22,6 @@ import com.google.common.util.concurrent.MoreExecutors
 /**
  * (RO)
  * Implementarea RadioPlayer care se conectează la [PlaybackService].
- * Gestionează redarea, metadatele RDS și oprirea serviciului.
  */
 class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
@@ -34,8 +33,6 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     private val _rdsInfo = MutableStateFlow<RdsInfo?>(null)
     override val rdsInfo: StateFlow<RdsInfo?> = _rdsInfo.asStateFlow()
-    
-    private var currentStationName: String? = null
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(state: Int) {
@@ -54,34 +51,22 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            // (RO) Identificăm dacă metadatele primite sunt diferite de numele postului (RDS real)
-            val dynamicTitle = mediaMetadata.title ?: mediaMetadata.displayTitle
-            val dynamicArtist = mediaMetadata.artist
+            // (RO) Captăm metadatele dinamice (RDS)
+            val title = mediaMetadata.title ?: mediaMetadata.displayTitle
+            val artist = mediaMetadata.artist
             
-            val rdsText = when {
-                // Dacă avem Artist - Titlu și nu e doar numele postului repetat
-                !dynamicArtist.isNullOrBlank() && !dynamicTitle.isNullOrBlank() && dynamicTitle.toString() != currentStationName -> 
-                    "$dynamicArtist - $dynamicTitle"
-                
-                // Dacă avem doar titlu și e diferit de numele postului
-                !dynamicTitle.isNullOrBlank() && dynamicTitle.toString() != currentStationName -> 
-                    dynamicTitle.toString()
-                
-                else -> ""
-            }
-
-            if (rdsText.isNotBlank()) {
-                _rdsInfo.value = RdsInfo(text = rdsText, isAvailable = true)
+            if (!title.isNullOrBlank()) {
+                val text = if (!artist.isNullOrBlank()) "$artist - $title" else title.toString()
+                _rdsInfo.value = RdsInfo(text = text, isAvailable = true)
             }
         }
 
         override fun onMetadata(metadata: Metadata) {
-            // (RO) Fallback pentru stream-uri ICY care nu mapează automat în MediaMetadata
             for (i in 0 until metadata.length()) {
                 val entry = metadata.get(i)
                 if (entry is IcyInfo) {
                     val title = entry.title
-                    if (!title.isNullOrBlank() && title != currentStationName) {
+                    if (!title.isNullOrBlank()) {
                         _rdsInfo.value = RdsInfo(text = title, isAvailable = true)
                     }
                 }
@@ -99,20 +84,19 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun play(station: Station) {
         _rdsInfo.value = null
-        currentStationName = station.name
         val player = controller
         if (player != null) {
-            val metadata = MediaMetadata.Builder()
-                .setTitle(station.name)
-                .setArtist(station.genre)
-                .setAlbumTitle(station.country)
-                .setArtworkUri(station.imageUrl?.let { Uri.parse(it) })
-                .build()
-
             val mediaItem = MediaItem.Builder()
                 .setMediaId(station.id)
                 .setUri(station.streamUrl)
-                .setMediaMetadata(metadata)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(station.name)
+                        .setArtist(station.genre)
+                        .setAlbumTitle(station.country)
+                        .setArtworkUri(station.imageUrl?.let { Uri.parse(it) })
+                        .build()
+                )
                 .build()
             
             player.setMediaItem(mediaItem)
@@ -127,7 +111,6 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun stop() {
         val player = controller ?: return
-        // (RO) Oprim playerul, curățăm lista și transmitem comanda de eliberare pentru a închide serviciul
         player.playWhenReady = false
         player.stop()
         player.clearMediaItems()
