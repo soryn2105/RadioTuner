@@ -66,6 +66,11 @@ class PlaybackService : MediaLibraryService() {
                     stopSelf()
                 }
             }
+            
+            override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                // (RO) Când RDS-ul se schimbă, notificăm sesiunea
+                mediaLibrarySession?.notifyChildrenChanged(FAVORITES_ID, 0, null)
+            }
         })
 
         val intent = Intent(this, MainActivity::class.java)
@@ -270,6 +275,24 @@ class PlaybackService : MediaLibraryService() {
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
             return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+        }
+
+        @OptIn(UnstableApi::class)
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            val future = SettableFuture<MediaSession.MediaItemsWithStartPosition>()
+            serviceScope.launch {
+                val favoritesRepo = (application as RadioTunerApplication).container.favoritesRepository
+                val lastStation = favoritesRepo.observeLastStation().first()
+                if (lastStation != null) {
+                    future.set(MediaSession.MediaItemsWithStartPosition(listOf(lastStation.toMediaItem()), 0, 0))
+                } else {
+                    future.setException(UnsupportedOperationException())
+                }
+            }
+            return future
         }
     }
 
