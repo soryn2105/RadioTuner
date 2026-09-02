@@ -49,25 +49,26 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
         override fun onPlayerError(error: PlaybackException) {
             _playbackState.value = PlaybackState.Error(error.message ?: "Eroare de redare necunoscută")
-            _rdsInfo.value = RdsInfo(text = "Eroare de conexiune", isAvailable = true)
+            _rdsInfo.value = RdsInfo(text = "Reconectare...", isAvailable = true)
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            // (RO) Captăm metadatele dinamice (RDS)
+            // (RO) Extragem informațiile dinamice (Artist - Melodie)
             val title = mediaMetadata.title ?: mediaMetadata.displayTitle
             val artist = mediaMetadata.artist
+            val subtitle = mediaMetadata.subtitle
             
-            val stationName = currentStation?.name ?: ""
-            
-            // Verificăm dacă informația primită este diferită de numele postului (pentru a fi un RDS valid)
-            val isDynamic = !title.isNullOrBlank() && 
-                           title.toString().trim().lowercase() != stationName.lowercase().trim()
+            val rdsText = when {
+                !artist.isNullOrBlank() && !title.isNullOrBlank() -> "$artist - $title"
+                !title.isNullOrBlank() -> title.toString()
+                !subtitle.isNullOrBlank() -> subtitle.toString()
+                else -> null
+            }
 
-            if (isDynamic) {
-                val rdsText = if (!artist.isNullOrBlank()) "$artist - $title" else title.toString()
+            if (rdsText != null && rdsText.lowercase() != currentStation?.name?.lowercase()) {
                 _rdsInfo.value = RdsInfo(text = rdsText, isAvailable = true)
             } else {
-                // Dacă nu avem metadate dinamice (ex: în pauză), afișăm info despre post
+                // Dacă nu avem RDS nou, afișăm info despre post
                 currentStation?.let {
                     _rdsInfo.value = RdsInfo(text = "${it.name} (${it.genre})", isAvailable = true)
                 }
@@ -97,7 +98,7 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun play(station: Station) {
         currentStation = station
-        // Resetăm rdsInfo la valorile de bază ale postului pentru pornire imediată
+        // Info inițial (până vine RDS-ul de la server)
         _rdsInfo.value = RdsInfo(text = "${station.name} (${station.genre})", isAvailable = true)
         
         val player = controller
@@ -107,7 +108,9 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
                 .setUri(station.streamUrl)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
-                        // NU setăm Titlul aici pentru a nu bloca RDS-ul dinamic
+                        // (RO) Important: NU setăm Title/Artist aici pentru a permite RDS-ului să le suprascrie
+                        .setStation(station.name)
+                        .setGenre(station.genre)
                         .setAlbumTitle(station.country)
                         .setArtworkUri(station.imageUrl?.let { Uri.parse(it) })
                         .build()
@@ -126,10 +129,9 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun stop() {
         val player = controller ?: return
-        // (RO) Secvență de oprire forțată pentru a închide și serviciul
         player.playWhenReady = false
         player.stop()
-        player.clearMediaItems()
+        player.clearMediaItems() // Această linie va declanșa stopSelf() în serviciu
         _playbackState.value = PlaybackState.Idle
         _rdsInfo.value = null
         currentStation = null

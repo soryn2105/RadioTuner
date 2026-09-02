@@ -189,6 +189,7 @@ class PlaybackService : MediaLibraryService() {
                     session.notifySearchResultChanged(browser, query, stations.size, params)
                 }
             }
+            // (RO) In functie de versiunea Media3
             return Futures.immediateFuture(LibraryResult.ofVoid())
         }
 
@@ -252,6 +253,7 @@ class PlaybackService : MediaLibraryService() {
                 .add(Player.COMMAND_SET_MEDIA_ITEM)
                 .add(Player.COMMAND_PLAY_PAUSE)
                 .add(Player.COMMAND_STOP)
+                .add(Player.COMMAND_GET_TIMELINE)
                 .build()
 
             return MediaSession.ConnectionResult.accept(availableSessionCommands.build(), playerCommands)
