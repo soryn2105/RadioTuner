@@ -31,7 +31,6 @@ import kotlinx.coroutines.flow.first
 /**
  * (RO)
  * Serviciu de fundal optimizat pentru Android Auto.
- * Implementează MediaLibraryService pentru a asigura sincronizarea completă cu aplicația de telefon.
  */
 class PlaybackService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
@@ -68,7 +67,7 @@ class PlaybackService : MediaLibraryService() {
             }
             
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                // (RO) Când RDS-ul se schimbă, notificăm sesiunea
+                // (RO) Sincronizăm metadatele (RDS) cu bordul mașinii
                 mediaLibrarySession?.notifyChildrenChanged(FAVORITES_ID, 0, null)
             }
         })
@@ -189,8 +188,7 @@ class PlaybackService : MediaLibraryService() {
                     session.notifySearchResultChanged(browser, query, stations.size, params)
                 }
             }
-            // (RO) In functie de versiunea Media3
-            return Futures.immediateFuture(LibraryResult.ofVoid())
+            return Futures.immediateFuture(LibraryResult.ofUnit())
         }
 
         @OptIn(UnstableApi::class)
