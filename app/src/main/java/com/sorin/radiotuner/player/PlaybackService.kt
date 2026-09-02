@@ -188,7 +188,7 @@ class PlaybackService : MediaLibraryService() {
                     session.notifySearchResultChanged(browser, query, stations.size, params)
                 }
             }
-            return Futures.immediateFuture(LibraryResult.ofUnit())
+            return Futures.immediateFuture(LibraryResult.ofVoid())
         }
 
         @OptIn(UnstableApi::class)
