@@ -1,5 +1,6 @@
 package com.sorin.radiotuner.player
 
+import android.R
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
@@ -11,7 +12,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
@@ -20,6 +24,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.AbstractFuture
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.sorin.radiotuner.MainActivity
@@ -31,6 +36,7 @@ import kotlinx.coroutines.flow.first
 /**
  * (RO)
  * Serviciu de fundal optimizat pentru Android Auto.
+ * Implementează MediaLibraryService pentru a asigura sincronizarea completă cu aplicația de telefon.
  */
 class PlaybackService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
@@ -46,6 +52,7 @@ class PlaybackService : MediaLibraryService() {
         private const val CUSTOM_COMMAND_TOGGLE_FAVORITE = "com.sorin.radiotuner.TOGGLE_FAVORITE"
     }
 
+    @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
         val audioAttributes = AudioAttributes.Builder()
@@ -53,10 +60,20 @@ class PlaybackService : MediaLibraryService() {
             .setUsage(C.USAGE_MEDIA)
             .build()
 
+        // (RO) Configurație specială pentru User-Agent - critic pentru unele posturi românești (Kiss, Digi)
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) RadioTuner/1.0")
+            .setAllowCrossProtocolRedirects(true)
+
+        val dataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
+        val mediaSourceFactory = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(dataSourceFactory)
+
         val player = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttributes, true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .setHandleAudioBecomingNoisy(true)
+            .setMediaSourceFactory(mediaSourceFactory)
             .build()
 
         player.addListener(object : Player.Listener {
@@ -67,7 +84,7 @@ class PlaybackService : MediaLibraryService() {
             }
             
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                // (RO) Sincronizăm metadatele (RDS) cu bordul mașinii
+                // (RO) Notificăm sesiunea despre schimbarea metadatelor (RDS)
                 mediaLibrarySession?.notifyChildrenChanged(FAVORITES_ID, 0, null)
             }
         })
@@ -241,7 +258,7 @@ class PlaybackService : MediaLibraryService() {
                 CommandButton.Builder()
                     .setDisplayName("Favorite")
                     .setSessionCommand(customCommand)
-                    .setIconResId(android.R.drawable.btn_star)
+                    .setIconResId(R.drawable.btn_star)
                     .build()
             )
             session.setCustomLayout(ImmutableList.copyOf(customLayout))
@@ -251,7 +268,6 @@ class PlaybackService : MediaLibraryService() {
                 .add(Player.COMMAND_SET_MEDIA_ITEM)
                 .add(Player.COMMAND_PLAY_PAUSE)
                 .add(Player.COMMAND_STOP)
-                .add(Player.COMMAND_GET_TIMELINE)
                 .build()
 
             return MediaSession.ConnectionResult.accept(availableSessionCommands.build(), playerCommands)
@@ -355,7 +371,7 @@ class PlaybackService : MediaLibraryService() {
         super.onDestroy()
     }
 
-    private class SettableFuture<T> : com.google.common.util.concurrent.AbstractFuture<T>() {
+    private class SettableFuture<T> : AbstractFuture<T>() {
         public override fun set(value: T): Boolean = super.set(value)
         public override fun setException(throwable: Throwable): Boolean = super.setException(throwable)
     }
