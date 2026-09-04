@@ -22,7 +22,7 @@ import com.google.common.util.concurrent.MoreExecutors
 /**
  * (RO)
  * Implementarea RadioPlayer care se conectează la [PlaybackService].
- * Optimizată pentru extragerea RDS de la posturile românești (Kiss, ZU, Digi, Prahova).
+ * Optimizată pentru extragerea RDS agresivă de la posturile românești (Kiss, ZU, ProFM, Capital).
  */
 class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
@@ -50,49 +50,66 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
         override fun onPlayerError(error: PlaybackException) {
             _playbackState.value = PlaybackState.Error(error.message ?: "Eroare de redare")
-            _rdsInfo.value = RdsInfo(text = "Eroare de conexiune", isAvailable = true)
+            _rdsInfo.value = RdsInfo(text = "Se reconectează...", isAvailable = true)
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            // (RO) Media3 mapează automat metadatele dinamice (ICY) aici.
-            // Verificăm câmpurile titlu, artist și subtitlu (folosit des de servere românești)
-            val title = mediaMetadata.title ?: mediaMetadata.displayTitle
-            val artist = mediaMetadata.artist
-            val subtitle = mediaMetadata.subtitle
-
-            val stationName = currentStation?.name?.lowercase() ?: ""
-            
-            // Verificăm dacă informația primită este diferită de numele postului (RDS real)
-            val hasRealTitle = !title.isNullOrBlank() && title.toString().lowercase().trim() != stationName
-            val hasRealArtist = !artist.isNullOrBlank() && artist.toString().lowercase().trim() != stationName
-            val hasRealSubtitle = !subtitle.isNullOrBlank() && subtitle.toString().lowercase().trim() != stationName
-
-            val rdsText = when {
-                hasRealArtist && hasRealTitle -> "$artist - $title"
-                hasRealTitle -> title.toString()
-                hasRealSubtitle -> subtitle.toString()
-                else -> null
-            }
-
-            if (rdsText != null) {
-                _rdsInfo.value = RdsInfo(text = rdsText.trim(), isAvailable = true)
-            } else {
-                // Dacă nu avem date noi, păstrăm info despre post
-                showStationInfo()
-            }
+            // (RO) Media3 mapează automat metadatele ICY (Shoutcast) aici.
+            processAdvancedMetadata(mediaMetadata)
         }
 
         override fun onMetadata(metadata: Metadata) {
-            // (RO) Suport direct pentru ICY (Shoutcast) - backup critic
+            // (RO) Suport direct pentru metadate ICY brute (critic pentru Kiss FM / ZU)
             for (i in 0 until metadata.length()) {
                 val entry = metadata.get(i)
                 if (entry is IcyInfo) {
-                    val title = entry.title
-                    if (!title.isNullOrBlank() && title.lowercase().trim() != currentStation?.name?.lowercase()) {
-                        _rdsInfo.value = RdsInfo(text = title.trim(), isAvailable = true)
-                    }
+                    processRawTitle(entry.title)
                 }
             }
+        }
+    }
+
+    private fun processAdvancedMetadata(metadata: MediaMetadata) {
+        // (RO) Verificăm toate câmpurile posibile unde serverele românești pot trimite melodia
+        val candidates = listOfNotNull(
+            metadata.title,
+            metadata.artist,
+            metadata.displayTitle,
+            metadata.subtitle
+        ).map { it.toString().trim() }.filter { it.isNotEmpty() }
+
+        val stationName = currentStation?.name?.lowercase() ?: ""
+        
+        // (RO) Căutăm prima informație care NU este numele postului
+        val dynamicInfo = candidates.firstOrNull { 
+            val low = it.lowercase()
+            low != stationName && !low.contains("stream title")
+        }
+
+        if (dynamicInfo != null) {
+            // Dacă avem artist și titlu separat, le formatăm frumos
+            val artist = metadata.artist?.toString()?.trim()
+            val title = metadata.title?.toString()?.trim()
+            
+            val finalRds = if (!artist.isNullOrBlank() && !title.isNullOrBlank() && title.lowercase() != stationName) {
+                "$artist - $title"
+            } else {
+                dynamicInfo
+            }
+            _rdsInfo.value = RdsInfo(text = finalRds, isAvailable = true)
+        } else {
+            showStationInfo()
+        }
+    }
+
+    private fun processRawTitle(rawTitle: String?) {
+        if (rawTitle.isNullOrBlank()) return
+        
+        val stationName = currentStation?.name?.lowercase() ?: ""
+        val lowTitle = rawTitle.lowercase().trim()
+        
+        if (lowTitle != stationName && !lowTitle.contains("stream title")) {
+            _rdsInfo.value = RdsInfo(text = rawTitle.trim(), isAvailable = true)
         }
     }
 
@@ -112,20 +129,19 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun play(station: Station) {
         currentStation = station
-        showStationInfo() // Afișăm imediat info post până la încărcarea RDS
+        showStationInfo()
         
         val player = controller
         if (player != null) {
-            // (RO) MediaItem-ul setat prin controller va fi trimis serviciului.
-            // IMPORTANT: Setăm metadatele minime pentru a nu "confunda" extractorul RDS din serviciu.
+            // (RO) IMPORTANT: Nu setăm Titlul sau Artistul aici.
+            // Le lăsăm goale pentru a permite extractorului RDS să le populeze cu date live.
             val mediaItem = MediaItem.Builder()
                 .setMediaId(station.id)
                 .setUri(station.streamUrl)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
-                        // Folosim station name ca display title, dar lăsăm 'title' gol 
-                        // ca să fie populat de fluxul ICY/RDS.
-                        .setDisplayTitle(station.name)
+                        // Setăm doar info de bază în câmpuri care nu sunt folosite de RDS-ul live
+                        .setStation(station.name)
                         .setAlbumTitle(station.country)
                         .setArtworkUri(station.imageUrl?.let { Uri.parse(it) })
                         .build()
