@@ -22,7 +22,7 @@ import com.google.common.util.concurrent.MoreExecutors
 /**
  * (RO)
  * Implementarea RadioPlayer care se conectează la [PlaybackService].
- * Gestionează extragerea avansată a RDS (Artist - Melodie), optimizată pentru posturile românești.
+ * Folosește logica originală de metadate care s-a dovedit funcțională pentru posturile românești.
  */
 class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
@@ -50,63 +50,31 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
         override fun onPlayerError(error: PlaybackException) {
             _playbackState.value = PlaybackState.Error(error.message ?: "Eroare de redare")
-            _rdsInfo.value = RdsInfo(text = "Reconectare...", isAvailable = true)
+            _rdsInfo.value = RdsInfo(text = "Eroare de conexiune", isAvailable = true)
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            // (RO) Media3 mapează automat metadatele ICY aici. 
-            processMetadata(mediaMetadata)
+            // (RO) Logica simplă: dacă primim titlu sau artist, le afișăm.
+            val title = mediaMetadata.title ?: mediaMetadata.displayTitle
+            val artist = mediaMetadata.artist
+            
+            if (!title.isNullOrBlank()) {
+                val rdsText = if (!artist.isNullOrBlank()) "$artist - $title" else title.toString()
+                _rdsInfo.value = RdsInfo(text = rdsText, isAvailable = true)
+            }
         }
 
         override fun onMetadata(metadata: Metadata) {
-            // (RO) Suport direct pentru ICY (Shoutcast/Icecast) - critic pentru posturile românești
+            // (RO) Suport critic pentru ICY (posturi românești)
             for (i in 0 until metadata.length()) {
                 val entry = metadata.get(i)
                 if (entry is IcyInfo) {
-                    processRawTitle(entry.title)
+                    val title = entry.title
+                    if (!title.isNullOrBlank()) {
+                        _rdsInfo.value = RdsInfo(text = title, isAvailable = true)
+                    }
                 }
             }
-        }
-    }
-
-    private fun processMetadata(metadata: MediaMetadata) {
-        val candidates = listOfNotNull(
-            metadata.title,
-            metadata.artist,
-            metadata.displayTitle,
-            metadata.subtitle,
-            metadata.albumArtist
-        ).map { it.toString().trim() }.filter { it.isNotEmpty() }
-
-        val stationName = currentStation?.name?.lowercase() ?: ""
-        
-        // (RO) Căutăm prima info care NU este numele postului
-        val dynamicInfo = candidates.firstOrNull { 
-            val low = it.lowercase()
-            low != stationName && !low.contains("stream title")
-        }
-
-        if (dynamicInfo != null) {
-            _rdsInfo.value = RdsInfo(text = dynamicInfo, isAvailable = true)
-        } else {
-            showStationInfo()
-        }
-    }
-
-    private fun processRawTitle(rawTitle: String?) {
-        if (rawTitle.isNullOrBlank()) return
-        
-        val stationName = currentStation?.name?.lowercase() ?: ""
-        val lowTitle = rawTitle.lowercase().trim()
-        
-        if (lowTitle != stationName && !lowTitle.contains("stream title")) {
-            _rdsInfo.value = RdsInfo(text = rawTitle.trim(), isAvailable = true)
-        }
-    }
-
-    private fun showStationInfo() {
-        currentStation?.let {
-            _rdsInfo.value = RdsInfo(text = "${it.name} (${it.genre})", isAvailable = true)
         }
     }
 
@@ -120,7 +88,8 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun play(station: Station) {
         currentStation = station
-        showStationInfo()
+        // Info inițial despre post
+        _rdsInfo.value = RdsInfo(text = "${station.name} (${station.genre})", isAvailable = true)
         
         val player = controller
         if (player != null) {
@@ -129,6 +98,8 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
                 .setUri(station.streamUrl)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
+                        .setTitle(station.name)
+                        .setArtist(station.genre)
                         .setAlbumTitle(station.country)
                         .setArtworkUri(station.imageUrl?.let { Uri.parse(it) })
                         .build()

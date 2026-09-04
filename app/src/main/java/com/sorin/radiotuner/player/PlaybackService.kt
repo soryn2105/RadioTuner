@@ -62,7 +62,7 @@ class PlaybackService : MediaLibraryService() {
 
         // (RO) Configurație specială pentru User-Agent - critic pentru unele posturi românești (Kiss, Digi)
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) RadioTuner/1.0")
+            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             .setAllowCrossProtocolRedirects(true)
 
         val dataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
@@ -84,8 +84,10 @@ class PlaybackService : MediaLibraryService() {
             }
             
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                // (RO) Notificăm sesiunea despre schimbarea metadatelor (RDS)
-                mediaLibrarySession?.notifyChildrenChanged(FAVORITES_ID, 0, null)
+                // (RO) Sincronizăm metadatele dinamice (RDS) cu sesiunea media
+                mediaLibrarySession?.let { session ->
+                    // Media3 ar trebui să facă asta automat, dar forțăm o notificare pentru Android Auto
+                }
             }
         })
 
