@@ -82,6 +82,7 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                     PlayerPane(
                         state = state,
                         viewModel = viewModel,
+                        onEditStation = { stationToEdit = it },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -89,6 +90,7 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                 PlayerPane(
                     state = state,
                     viewModel = viewModel,
+                    onEditStation = { stationToEdit = it },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -248,6 +250,7 @@ private fun AppHeader(
 private fun PlayerPane(
     state: com.sorin.radiotuner.ui.viewmodel.RadioUiState,
     viewModel: RadioViewModel,
+    onEditStation: (Station) -> Unit,
     modifier: Modifier
 ) {
     val isPlaying = state.playbackState is PlaybackState.Playing
@@ -315,7 +318,11 @@ private fun PlayerPane(
 
         if (state.currentStation != null) {
             Spacer(Modifier.height(16.dp))
-            StationDetails(station = state.currentStation, isVisible = showDetails)
+            StationDetails(
+                station = state.currentStation,
+                isVisible = showDetails,
+                onEditClick = if (isFavorite) { { onEditStation(state.currentStation) } } else null
+            )
         }
 
         Spacer(Modifier.height(24.dp))

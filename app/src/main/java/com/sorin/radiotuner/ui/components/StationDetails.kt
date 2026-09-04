@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Speed
@@ -37,6 +38,7 @@ import com.sorin.radiotuner.ui.theme.*
 fun StationDetails(
     station: Station,
     isVisible: Boolean,
+    onEditClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -59,7 +61,7 @@ fun StationDetails(
                 value = station.homepage ?: "Nespecificat"
             )
             
-            // Adresă Flux cu buton de copiere
+            // Adresă Flux cu butoane de copiere și editare
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.weight(1f)) {
                     InfoRow(
@@ -68,19 +70,36 @@ fun StationDetails(
                         value = station.streamUrl
                     )
                 }
-                IconButton(
-                    onClick = {
-                        copyToClipboard(context, station.streamUrl)
-                        Toast.makeText(context, "Link copiat!", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy",
-                        tint = Amber.copy(alpha = 0.8f),
-                        modifier = Modifier.size(20.dp)
-                    )
+                
+                Row {
+                    if (onEditClick != null) {
+                        IconButton(
+                            onClick = onEditClick,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = Amber,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = {
+                            copyToClipboard(context, station.streamUrl)
+                            Toast.makeText(context, "Link copiat!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copy",
+                            tint = Amber.copy(alpha = 0.8f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 

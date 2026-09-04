@@ -1,0 +1,61 @@
+================================================================================
+DEBUG CHANGES LOG - RadioTuner v1.4.6
+================================================================================
+
+Acest document conține sumarul modificărilor tehnice efectuate pentru remedierea
+problemelor de RDS, buton STOP și integrare Android Auto.
+
+--------------------------------------------------------------------------------
+1. MOTORUL RDS (ExoRadioPlayer.kt)
+--------------------------------------------------------------------------------
+- Metoda onMediaMetadataChanged:
+    * Acum scanează Title, DisplayTitle, Artist și Subtitle.
+    * S-a implementat o logică de filtrare inteligentă: textul primit este afișat
+      doar dacă este diferit de numele postului (lowercase/trim).
+    * Dacă metadatele sunt identice cu numele postului, aplicația revine la
+      formatul "Nume Post (Gen)" pentru a evita redundanța.
+- Metoda onMetadata:
+    * S-a restabilit suportul pentru metadate ICY (Shoutcast/Icecast) brute.
+    * Se extrage 'StreamTitle' și se afișează imediat dacă este valid.
+- Metoda play:
+    * Modificare critică: La pornire, MediaItem-ul NU mai conține Title sau Artist
+      în metadatele statice. Această "curățare" forțează playerul să accepte
+      metadatele dinamice de la server imediat ce acestea devin disponibile.
+
+--------------------------------------------------------------------------------
+2. SERVICIUL DE REDARE (PlaybackService.kt)
+--------------------------------------------------------------------------------
+- User-Agent (Critic):
+    * S-a configurat DefaultHttpDataSource cu un User-Agent de Chrome modern:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36..."
+    * Fără acest header, serverele românești (Kiss FM, Digi, ZU) refuză să
+      trimită fluxul de metadate RDS.
+- Android Auto Integration:
+    * S-a implementat MediaLibraryService.
+    * stationCache: Mapare internă ID -> Station pentru a permite mașinii să
+      pornească instantaneu orice post găsit prin căutare sau navigare.
+    * onConnect: Se acordă permisiuni explicite pentru:
+        - GET_LIBRARY_ROOT, GET_CHILDREN, GET_ITEM (Navigare)
+        - SEARCH (Căutare vocală/tastatură)
+        - COMMAND_GET_METADATA (Afișare info pe bord)
+    * notifyChildrenChanged: Apelat în onMediaMetadataChanged pentru a forța
+      actualizarea bordului mașinii la schimbarea melodiei.
+
+--------------------------------------------------------------------------------
+3. CONTROLUL REDĂRII SI STOP
+--------------------------------------------------------------------------------
+- Secvența Stop (ExoRadioPlayer.kt & PlaybackService.kt):
+    * La apăsarea STOP, se apelează clearMediaItems().
+    * PlaybackService ascultă onPlaybackStateChanged. Când starea devine IDLE
+      și lista e goală, se apelează stopSelf().
+    * Rezultat: Notificarea dispare instantaneu, serviciul se închide corect.
+
+--------------------------------------------------------------------------------
+4. CONFIGURAȚIE BUILD (libs.versions.toml)
+--------------------------------------------------------------------------------
+- Aliniere versiuni: S-a asigurat compatibilitatea între Media3 (1.10.1) și
+  Kotlin (2.2.10) pentru a evita erorile de tip "Unresolved reference" la compile.
+
+================================================================================
+FINAL LOG END
+================================================================================
