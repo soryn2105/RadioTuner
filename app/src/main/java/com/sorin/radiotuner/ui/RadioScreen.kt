@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -15,9 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import android.content.res.Configuration
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -264,6 +267,13 @@ private fun PlayerPane(
         else -> "STOPPED"
     }
 
+    val statusColor = when (state.playbackState) {
+        is PlaybackState.Playing -> LedGreen
+        is PlaybackState.Buffering -> Amber
+        is PlaybackState.Error -> HeartRed
+        else -> Muted
+    }
+
     Column(
         modifier = modifier
             .padding(24.dp)
@@ -271,13 +281,30 @@ private fun PlayerPane(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // (RO) Status Badge - separat de logo
+        Surface(
+            color = statusColor.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
+        ) {
+            Text(
+                text = statusLabel,
+                color = statusColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        Spacer(Modifier.height(24.dp))
+
         TuningDial(
-            statusLabel = statusLabel,
             isPlaying = isPlaying,
             imageUrl = state.currentStation?.imageUrl
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(32.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,

@@ -2,95 +2,86 @@ package com.sorin.radiotuner.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.sorin.radiotuner.ui.theme.*
+import com.sorin.radiotuner.R
+import com.sorin.radiotuner.ui.theme.Amber
+import com.sorin.radiotuner.ui.theme.Graphite800
+import com.sorin.radiotuner.ui.theme.Graphite900
 
 /**
  * (RO)
- * Cadranul central al playerului — acum include și logo-ul postului (dacă e disponibil).
- * Se rotește și se luminează doar cât timp postul chiar redă.
+ * Cadranul rotativ al playerului.
+ * Acum conține DOAR logo-ul postului, separat de starea redării.
  */
 @Composable
-fun TuningDial(statusLabel: String, isPlaying: Boolean, imageUrl: String? = null) {
-    val transition = rememberInfiniteTransition(label = "dial")
-    val rotation by transition.animateFloat(
+fun TuningDial(
+    isPlaying: Boolean,
+    imageUrl: String?,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "rotation")
+    val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(3500, easing = LinearEasing), RepeatMode.Restart),
-        label = "rotation"
+        animationSpec = infiniteRepeatable(
+            animation = tween(12000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "dialRotation"
     )
 
+    val currentRotation = if (isPlaying) rotation else 0f
+
     Box(
-        modifier = Modifier.size(168.dp),
+        modifier = modifier
+            .size(240.dp)
+            .shadow(24.dp, CircleShape, ambientColor = Amber.copy(alpha = 0.3f))
+            .clip(CircleShape)
+            .background(
+                brush = Brush.radialGradient(
+                    colors = listOf(Graphite800, Graphite900)
+                )
+            )
+            .border(2.dp, Amber.copy(alpha = 0.5f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        // Inelul luminos rotativ
+        // (RO) Inelul decorativ (ca un disc de vinil)
         Box(
             modifier = Modifier
-                .size(168.dp)
-                .rotate(if (isPlaying) rotation else 0f)
-                .background(
-                    brush = Brush.sweepGradient(
-                        colors = if (isPlaying) listOf(Amber, AmberDim, Color.Transparent, Color.Transparent)
-                        else listOf(AmberDim.copy(alpha = 0.15f), AmberDim.copy(alpha = 0.15f))
-                    ),
-                    shape = CircleShape
-                )
+                .fillMaxSize(0.92f)
+                .border(1.dp, Color.White.copy(alpha = 0.05f), CircleShape)
         )
-        
-        // Fundalul interior
+
+        // (RO) Logo-ul care se rotește
         Box(
             modifier = Modifier
-                .size(132.dp)
-                .background(Graphite900, CircleShape),
-            contentAlignment = Alignment.Center
+                .fillMaxSize(0.75f)
+                .rotate(currentRotation)
+                .clip(CircleShape)
+                .background(Color.Black)
         ) {
-            // Logo post (centrat)
-            if (!imageUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.2f)),
-                    alpha = if (isPlaying) 1f else 0.5f
-                )
-            }
-
-            // Etichetă Status (peste logo, dacă e pornit)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(if (imageUrl != null) Color.Black.copy(alpha = 0.3f) else Color.Transparent, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = statusLabel,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = if (isPlaying) Cream else Muted
-                )
-            }
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Logo post",
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(R.drawable.ic_radio_placeholder),
+                error = painterResource(R.drawable.ic_radio_placeholder),
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

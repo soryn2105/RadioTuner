@@ -22,7 +22,7 @@ import com.google.common.util.concurrent.MoreExecutors
 /**
  * (RO)
  * Implementarea RadioPlayer care se conectează la [PlaybackService].
- * Optimizată pentru extragerea RDS agresivă (Artist - Melodie) de la posturile românești.
+ * Logică unificată pentru RDS (România + Global).
  */
 class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
@@ -54,61 +54,48 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            // (RO) Media3 mapează automat metadatele ICY (Shoutcast/Icecast) aici.
-            // Pentru posturile românești, titlul melodiei vine de obicei în câmpul 'title'.
-            processMetadata(mediaMetadata)
+            // (RO) Unificăm datele: tratăm orice info dinamică drept RDS prioritat
+            processDynamicMetadata(
+                title = mediaMetadata.title?.toString(),
+                artist = mediaMetadata.artist?.toString(),
+                display = mediaMetadata.displayTitle?.toString()
+            )
         }
 
         override fun onMetadata(metadata: Metadata) {
-            // (RO) Suport direct pentru metadate ICY brute - foarte important pentru Kiss/ZU/Digi
+            // (RO) Captăm StreamTitle direct (metoda preferată de Kiss/ZU/ProFM)
             for (i in 0 until metadata.length()) {
                 val entry = metadata.get(i)
-                if (entry is IcyInfo) {
-                    val streamTitle = entry.title
-                    if (!streamTitle.isNullOrBlank()) {
-                        updateRdsText(streamTitle)
-                    }
+                if (entry is IcyInfo && !entry.title.isNullOrBlank()) {
+                    processDynamicMetadata(title = entry.title, artist = null, display = null)
                 }
             }
         }
     }
 
-    private fun processMetadata(metadata: MediaMetadata) {
-        val title = metadata.title?.toString()
-        val artist = metadata.artist?.toString()
-        val displayTitle = metadata.displayTitle?.toString()
+    private fun processDynamicMetadata(title: String?, artist: String?, display: String?) {
+        val stationName = currentStation?.name?.lowercase() ?: ""
         
-        // (RO) Prioritizăm Title/Artist dacă sunt prezente și diferite de numele postului
-        val stationName = currentStation?.name ?: ""
-        
-        val filteredTitle = if (title?.trim()?.lowercase() != stationName.lowercase().trim()) title else null
-        val filteredArtist = if (artist?.trim()?.lowercase() != stationName.lowercase().trim()) artist else null
-        
-        when {
-            !filteredArtist.isNullOrBlank() && !filteredTitle.isNullOrBlank() -> {
-                updateRdsText("$filteredArtist - $filteredTitle")
-            }
-            !filteredTitle.isNullOrBlank() -> {
-                updateRdsText(filteredTitle)
-            }
-            !displayTitle.isNullOrBlank() && displayTitle.trim().lowercase() != stationName.lowercase().trim() -> {
-                updateRdsText(displayTitle)
-            }
-            else -> {
-                // Dacă nu avem metadate noi, afișăm informația de bază a postului
-                showStationInfo()
-            }
+        // (RO) Verificăm dacă informația primită este utilă (nu este doar numele postului)
+        val validTitle = if (title?.lowercase()?.trim() != stationName) title?.trim() else null
+        val validArtist = if (artist?.lowercase()?.trim() != stationName) artist?.trim() else null
+        val validDisplay = if (display?.lowercase()?.trim() != stationName) display?.trim() else null
+
+        val rdsText = when {
+            !validArtist.isNullOrBlank() && !validTitle.isNullOrBlank() -> "$validArtist - $validTitle"
+            !validTitle.isNullOrBlank() -> validTitle
+            !validDisplay.isNullOrBlank() -> validDisplay
+            else -> null
+        }
+
+        if (rdsText != null) {
+            _rdsInfo.value = RdsInfo(text = rdsText, isAvailable = true)
+        } else {
+            showBaselineInfo()
         }
     }
 
-    private fun updateRdsText(text: String) {
-        val trimmed = text.trim()
-        if (trimmed.isNotEmpty()) {
-            _rdsInfo.value = RdsInfo(text = trimmed, isAvailable = true)
-        }
-    }
-
-    private fun showStationInfo() {
+    private fun showBaselineInfo() {
         currentStation?.let {
             _rdsInfo.value = RdsInfo(text = "${it.name} (${it.genre})", isAvailable = true)
         }
@@ -124,12 +111,11 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun play(station: Station) {
         currentStation = station
-        showStationInfo()
+        showBaselineInfo()
         
         val player = controller
         if (player != null) {
-            // (RO) NU setăm Titlul sau Artistul aici.
-            // Le lăsăm goale în MediaItem pentru a forța playerul să accepte metadatele dinamice.
+            // (RO) NU setăm Title/Artist în metadata-ul fix pentru a forța preluarea RDS-ului de pe stream
             val mediaItem = MediaItem.Builder()
                 .setMediaId(station.id)
                 .setUri(station.streamUrl)
