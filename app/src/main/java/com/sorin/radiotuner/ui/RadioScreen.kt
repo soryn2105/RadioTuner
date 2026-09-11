@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -31,6 +32,7 @@ import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.player.PlaybackState
 import com.sorin.radiotuner.ui.components.*
 import com.sorin.radiotuner.ui.theme.*
+import com.sorin.radiotuner.ui.viewmodel.RadioUiState
 import com.sorin.radiotuner.ui.viewmodel.RadioViewModel
 import com.sorin.radiotuner.ui.viewmodel.RadioViewModelFactory
 
@@ -178,8 +180,8 @@ fun RadioScreen(factory: RadioViewModelFactory) {
     if (showManualStationDialog) {
         ManualStationDialog(
             onDismiss = { showManualStationDialog = false },
-            onConfirm = { name, url ->
-                viewModel.addManualStation(name, url)
+            onConfirm = { name, url, img, gen, ctr, web ->
+                viewModel.addManualStation(name, url, img, gen, ctr, web)
                 showManualStationDialog = false
             }
         )
@@ -187,12 +189,11 @@ fun RadioScreen(factory: RadioViewModelFactory) {
 
     if (stationToEdit != null) {
         ManualStationDialog(
-            initialName = stationToEdit!!.name,
-            initialUrl = stationToEdit!!.streamUrl,
+            station = stationToEdit,
             isEditing = true,
             onDismiss = { stationToEdit = null },
-            onConfirm = { name, url ->
-                viewModel.updateManualStation(stationToEdit!!, name, url)
+            onConfirm = { name, url, img, gen, ctr, web ->
+                viewModel.updateManualStation(stationToEdit!!, name, url, img, gen, ctr, web)
                 stationToEdit = null
             }
         )
@@ -251,7 +252,7 @@ private fun AppHeader(
 
 @Composable
 private fun PlayerPane(
-    state: com.sorin.radiotuner.ui.viewmodel.RadioUiState,
+    state: RadioUiState,
     viewModel: RadioViewModel,
     onEditStation: (Station) -> Unit,
     modifier: Modifier
@@ -320,7 +321,7 @@ private fun PlayerPane(
                     fontWeight = FontWeight.Bold,
                     fontSize = 26.sp,
                     maxLines = 2,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
                 if (state.currentStation != null) {
                     Text(

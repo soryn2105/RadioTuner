@@ -211,30 +211,36 @@ class RadioViewModel(
     }
 
     /** (RO) Adaugă un post manual direct în lista de favorite. */
-    fun addManualStation(name: String, url: String) {
+    fun addManualStation(name: String, url: String, imageUrl: String, genre: String, country: String, homepage: String) {
         viewModelScope.launch {
             val manualStation = Station(
                 id = "manual-${System.currentTimeMillis()}",
                 name = name.trim(),
-                genre = "Manual / Direct",
-                country = "Local",
+                genre = genre.trim().ifEmpty { "Manual / Direct" },
+                country = country.trim().ifEmpty { "Local" },
                 streamUrl = url.trim(),
-                isFavorite = true
+                isFavorite = true,
+                imageUrl = imageUrl.trim().ifEmpty { null },
+                homepage = homepage.trim().ifEmpty { null }
             )
             favoritesRepository.toggleFavorite(manualStation)
         }
     }
 
     /** (RO) Actualizează datele unui post existent în favorite. */
-    fun updateManualStation(station: Station, newName: String, newUrl: String) {
+    fun updateManualStation(station: Station, name: String, url: String, imageUrl: String, genre: String, country: String, homepage: String) {
         viewModelScope.launch {
             val updated = station.copy(
-                name = newName.trim(),
-                streamUrl = newUrl.trim()
+                name = name.trim(),
+                streamUrl = url.trim(),
+                imageUrl = imageUrl.trim().ifEmpty { null },
+                genre = genre.trim().ifEmpty { "Manual / Direct" },
+                country = country.trim().ifEmpty { "Local" },
+                homepage = homepage.trim().ifEmpty { null }
             )
             favoritesRepository.updateFavorite(updated)
             
-            // Dacă postul actualizat este cel care cântă acum, îl reîncărcăm în player (opțional)
+            // Dacă postul actualizat este cel care cântă acum, îl reîncărcăm în player
             if (_uiState.value.currentStation?.id == updated.id) {
                 _uiState.value = _uiState.value.copy(currentStation = updated)
             }
