@@ -1,0 +1,117 @@
+================================================================================
+COMPLETE TECHNICAL DOCUMENTATION - AMBER TUNER (RadioTuner)
+================================================================================
+
+This document provides a detailed description of the structure, components,
+and internal logic of the Amber Tuner application.
+
+--------------------------------------------------------------------------------
+1. FOLDER STRUCTURE
+--------------------------------------------------------------------------------
+
+/app/src/main/java/com/sorin/radiotuner/
+├── data/               -> Data management (Network, Local Storage, Models).
+│   ├── local/          -> Data persistence on the device (DataStore).
+│   ├── model/          -> Pure data objects (Station, RdsInfo).
+│   ├── network/        -> Communication with Radio Browser API servers.
+│   └── repository/     -> Interfaces linking the UI and Data layers.
+├── di/                 -> Dependency Injection (Object Container).
+├── player/             -> Audio Engine (ExoPlayer, Media3, RDS).
+├── ui/                 -> Visual Interface (Compose, ViewModels).
+│   ├── components/     -> Reusable UI elements (Buttons, Tuning Dial).
+│   └── theme/          -> Application colors and styles.
+└── util/               -> Utilities (Network Monitoring, Reconnect Strategies).
+
+--------------------------------------------------------------------------------
+2. FILE DESCRIPTIONS AND CODE LOGIC
+--------------------------------------------------------------------------------
+
+A. PLAYER & BACKGROUND SERVICE (The Core)
+
+File: PlaybackService.kt
+Purpose: Enables background playback and Android Auto integration.
+--------------------------------------------------------------------------------
+- Inherits MediaLibraryService: This is the Google standard that allows the car
+  to "browse" radio lists from the app.
+- onCreate():
+    * Configures ExoPlayer with MUSIC audio attributes.
+    * Sets WakeMode(NETWORK) to prevent Android from killing the process when
+      the screen is off.
+    * Configures a Chrome-like User-Agent (critical so that Romanian servers
+      do not block RDS data).
+- LibraryCallback:
+    * onGetLibraryRoot: Defines what the car sees upon opening (Favorites, Countries, Search).
+    * onGetChildren: Actually loads the station list from the local DB or cache
+      when navigating the car's dashboard.
+    * onSearch: Enables using the car's search icon or voice commands to find
+      stations globally.
+- onConnect: Grants control permissions (Play, Pause, Stop, RDS) to external devices.
+
+File: ExoRadioPlayer.kt
+Purpose: Controls the physical player and extracts song/artist info (RDS).
+--------------------------------------------------------------------------------
+- onMediaMetadataChanged():
+    * The most important method for RDS.
+    * Scans Title, Artist, and Subtitle sent by the radio server.
+    * Includes a smart filter: if the received text is identical to the station
+      name, it ignores it to favor the song name.
+- onMetadata():
+    * Captures raw ICY (Shoutcast) data. Many Romanian stations (Kiss FM, ZU)
+      use this legacy format.
+- stop():
+    * Clears the playlist and stops the engine, ensuring the notification disappears.
+
+B. DATA LAYER (Information Management)
+
+File: FavoritesDataStore.kt
+Purpose: Permanently saves favorites and user settings on the phone.
+--------------------------------------------------------------------------------
+- Uses Jetpack DataStore (the modern replacement for SharedPreferences).
+- Saves the station list as a JSON string.
+- Remembers "last_tab" and "last_station" to reopen the app exactly where it left off.
+
+File: NetworkStationRepository.kt
+Purpose: Queries the worldwide radio database.
+--------------------------------------------------------------------------------
+- Implements a Failover system: if the German server doesn't respond, it
+  automatically switches to Austria or the Netherlands.
+- Transforms raw internet data (DTO) into Station objects the UI can display.
+
+C. UI LAYER (User Interface)
+
+File: RadioViewModel.kt
+Purpose: The "brain" of the screen. Manages what the user sees.
+--------------------------------------------------------------------------------
+- Maintains RadioUiState (a single object containing everything: station list,
+  what's playing, online status).
+- selectStation(): Sends the play command and saves the station as "last listened".
+- updateManualStation(): Allows editing the name or URL for favorites.
+
+File: TuningDial.kt
+Purpose: The main visualizer (The Dial).
+--------------------------------------------------------------------------------
+- Uses infinite rotation animations.
+- The outer ring with a gradient (SweepGradient) rotates to simulate real
+  radio equipment.
+- The central logo is displayed statically using the Coil library for clarity.
+
+--------------------------------------------------------------------------------
+3. LINE-BY-LINE EXPLANATION (CRITICAL EXAMPLES: PlaybackService.kt)
+--------------------------------------------------------------------------------
+
+Line 45: `private val stationCache = mutableMapOf<String, Station>()`
+-> Creates temporary memory for found stations. The car needs the station ID to
+   start it; the cache links the ID to the music URL.
+
+Line 64: `.setUserAgent("Mozilla/5.0 ...")`
+-> Identifies the app as a browser. Without this, stations like Digi FM or
+   Kiss FM will not send song information (RDS).
+
+Line 180: `session.notifyChildrenChanged(FAVORITES_ID, 0, null)`
+-> Tells the car: "The song or list has changed, please redraw the screen text".
+
+--------------------------------------------------------------------------------
+DOCUMENTATION COMPLETE.
+Amber Tuner follows Clean Architecture principles, separating visuals (UI)
+from logic (ViewModel) and playback (Service/Player).
+================================================================================

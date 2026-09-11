@@ -1,0 +1,105 @@
+================================================================================
+DOCUMENTAȚIE TEHNICĂ COMPLETĂ - AMBER TUNER (RadioTuner)
+================================================================================
+
+Acest document oferă o descriere detaliată a structurii, componentelor și logicii
+interne a aplicației Amber Tuner.
+
+--------------------------------------------------------------------------------
+1. STRUCTURA DE DOSARE (FOLDERE)
+--------------------------------------------------------------------------------
+
+/app/src/main/java/com/sorin/radiotuner/
+├── data/               -> Gestionarea datelor (rețea, stocare locală, modele).
+│   ├── local/          -> Persistența datelor pe telefon (DataStore).
+│   ├── model/          -> Obiectele de date pure (Station, RdsInfo).
+│   ├── network/        -> Comunicarea cu serverele Radio Browser API.
+│   └── repository/     -> Interfețele care fac legătura între UI și Date.
+├── di/                 -> Dependency Injection (Containerul de obiecte).
+├── player/             -> Motorul audio (ExoPlayer, Media3, RDS).
+├── ui/                 -> Interfața vizuală (Compose, ViewModels).
+│   ├── components/     -> Elementele vizuale reutilizabile (Butoane, Cadran).
+│   └── theme/          -> Culorile și stilurile aplicației.
+└── util/               -> Utilitare (Monitorizare Internet, Strategii reconectare).
+
+--------------------------------------------------------------------------------
+2. DESCRIEREA FIȘIERELOR ȘI LOGICA CODULUI
+--------------------------------------------------------------------------------
+
+A. PLAYER & BACKGROUND SERVICE (Inima aplicației)
+
+Fișier: PlaybackService.kt
+Scop: Permite redarea muzicii în fundal și integrarea cu Android Auto.
+--------------------------------------------------------------------------------
+- Moștenește MediaLibraryService: Este standardul Google care permite mașinii să "răsfoiască" listele de radio din aplicație.
+- onCreate():
+    * Configurează ExoPlayer cu atribute audio de tip MUSIC.
+    * Setează WakeMode(NETWORK) pentru a preveni închiderea procesului de către Android când ecranul e stins.
+    * Configurează un User-Agent de tip Chrome (critic pentru ca serverele românești să nu blocheze RDS-ul).
+- LibraryCallback:
+    * onGetLibraryRoot: Definește ce vede mașina la prima deschidere (Favorite, Țări, Căutare).
+    * onGetChildren: Încarcă efectiv lista de posturi din baza de date locală sau cache atunci când navighezi pe bordul mașinii.
+    * onSearch: Permite folosirea lupei sau a comenzilor vocale în mașină pentru a găsi posturi global.
+- onConnect: Acordă permisiuni de control (Play, Pause, Stop, RDS) dispozitivelor externe.
+
+Fișier: ExoRadioPlayer.kt
+Scop: Controlează playerul fizic și extrage melodia/artistul (RDS).
+--------------------------------------------------------------------------------
+- onMediaMetadataChanged():
+    * Cea mai importantă metodă pentru RDS.
+    * Scanează Titlul, Artistul și Subtitlul trimise de serverul radio.
+    * Include un filtru inteligent: dacă textul primit este identic cu numele postului, îl ignoră pentru a lăsa loc numelui melodiei.
+- onMetadata():
+    * Prinde datele de tip ICY (Shoutcast). Multe posturi românești (Kiss FM, ZU) folosesc acest format vechi.
+- stop():
+    * Curăță lista de redare și oprește motorul, asigurând dispariția notificării.
+
+B. DATA LAYER (Managementul informației)
+
+Fișier: FavoritesDataStore.kt
+Scop: Salvează permanent pe telefon favoritele și setările utilizatorului.
+--------------------------------------------------------------------------------
+- Folosește Jetpack DataStore (înlocuitorul modern pentru SharedPreferences).
+- Salvează lista de posturi ca un șir JSON.
+- Reține "last_tab" și "last_station" pentru a redeschide aplicația exact unde a rămas.
+
+Fișier: NetworkStationRepository.kt
+Scop: Interoghează baza de date mondială de radio-uri.
+--------------------------------------------------------------------------------
+- Implementează un sistem de Failover: dacă serverul din Germania nu răspunde, trece automat la cel din Austria sau Olanda.
+- Transformă datele brute de pe internet (DTO) în obiecte Station pe care aplicația le poate afișa.
+
+C. UI LAYER (Interfața cu utilizatorul)
+
+Fișier: RadioViewModel.kt
+Scop: „Creierul” ecranului. Gestionează ce vede utilizatorul.
+--------------------------------------------------------------------------------
+- Păstrează RadioUiState (un obiect care conține tot: lista de posturi, ce cântă acum, dacă ești online).
+- selectStation(): Trimite comanda de redare și salvează postul ca fiind „ultimul ascultat”.
+- updateManualStation(): Permite editarea numelui sau a URL-ului pentru favorite.
+
+Fișier: TuningDial.kt
+Scop: Vizualizarea principală (Cadranul).
+--------------------------------------------------------------------------------
+- Folosește animații infinite de rotație.
+- Inelul exterior cu gradient (SweepGradient) se rotește pentru a simula un echipament radio real.
+- Logo-ul central este afișat static prin biblioteca Coil pentru claritate.
+
+--------------------------------------------------------------------------------
+3. EXPLICAȚIE LINIE CU LINIE (EXEMPLU CRITIC: PlaybackService.kt)
+--------------------------------------------------------------------------------
+
+Linia 45: `private val stationCache = mutableMapOf<String, Station>()`
+-> Creează o memorie temporară pentru posturile găsite. Mașina are nevoie de ID-ul postului pentru a-l porni; cache-ul face legătura între ID și URL-ul de muzică.
+
+Linia 64: `.setUserAgent("Mozilla/5.0 ...")`
+-> Identifică aplicația ca fiind un browser. Fără asta, posturi ca Digi FM sau Kiss FM nu trimit informațiile despre melodie (RDS).
+
+Linia 180: `session.notifyChildrenChanged(FAVORITES_ID, 0, null)`
+-> Spune mașinii: "S-a schimbat melodia sau lista, te rog să redesenezi textul de pe ecran".
+
+--------------------------------------------------------------------------------
+DOCUMENTAȚIE FINALIZATĂ.
+Aplicația Amber Tuner urmează principiile Clean Architecture, separând vizualul (UI)
+de logică (ViewModel) și de redare (Service/Player).
+================================================================================
