@@ -303,91 +303,106 @@ private fun PlayerPane(
 
     Column(
         modifier = modifier
-            .padding(24.dp)
+            .padding(16.dp)
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Status Badge (Centered)
-        Surface(
-            color = statusColor.copy(alpha = 0.12f),
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, statusColor.copy(alpha = 0.6f))
+        // --- Grupul Principal (Badge + Text în stânga, Logo în dreapta) ---
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = statusLabel,
-                color = statusColor,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                fontFamily = FontFamily.Monospace
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        // Dial & Logo (Centered, Larger)
-        Box(modifier = Modifier.size(240.dp)) {
-            TuningDial(
-                isPlaying = isPlaying,
-                imageUrl = state.currentStation?.imageUrl
-            )
-        }
-
-        Spacer(Modifier.height(32.dp))
-
-        // Station Name (Centered, Much Larger)
-        Text(
-            text = state.currentStation?.name ?: "Niciun post selectat",
-            color = Cream,
-            fontWeight = FontWeight.Bold,
-            fontSize = 32.sp,
-            maxLines = 2,
-            textAlign = TextAlign.Center,
-            lineHeight = 38.sp,
-            modifier = Modifier.fillMaxWidth()
-        )
-        
-        if (state.currentStation != null) {
-            // Genre (Centered, Larger)
-            Text(
-                text = "${state.currentStation.genre} · ${state.currentStation.country}",
-                color = Muted,
-                fontSize = 18.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(Modifier.height(12.dp))
-            
-            // Info Button (Centered)
-            IconButton(
-                onClick = { showDetails = !showDetails },
-                modifier = Modifier.size(56.dp)
+            // Coloana din stânga
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.Start
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Info",
-                    tint = if (showDetails) Amber else Muted,
-                    modifier = Modifier.size(32.dp)
+                // 1. Badge-ul de State
+                Surface(
+                    color = statusColor.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.6f))
+                ) {
+                    Text(
+                        text = statusLabel,
+                        color = statusColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // 2. Postul de radio + Gen/Țară
+                Text(
+                    text = state.currentStation?.name ?: "Niciun post selectat",
+                    color = Cream,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                    maxLines = 2,
+                    lineHeight = 34.sp
+                )
+                
+                if (state.currentStation != null) {
+                    Text(
+                        text = "${state.currentStation.genre} · ${state.currentStation.country}",
+                        color = Muted,
+                        fontSize = 16.sp
+                    )
+                    
+                    Spacer(Modifier.height(12.dp))
+
+                    // 3. Butonul Info (sub nume)
+                    IconButton(
+                        onClick = { showDetails = !showDetails },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = if (showDetails) Amber else Muted,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            // Logo+Cadran în dreapta (dimensiune redusă pentru a încăpea)
+            Box(modifier = Modifier.size(170.dp)) {
+                TuningDial(
+                    isPlaying = isPlaying,
+                    imageUrl = state.currentStation?.imageUrl
                 )
             }
         }
 
+        // Informațiile (StationDetails) - Apar sub grupul centrat
         if (state.currentStation != null) {
-            Spacer(Modifier.height(16.dp))
-            StationDetails(
-                station = state.currentStation,
-                isVisible = showDetails,
-                onEditClick = if (isFavorite) { { onEditStation(state.currentStation) } } else null,
-                onCheckUpdate = onCheckUpdate
-            )
+            AnimatedVisibility(visible = showDetails) {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    StationDetails(
+                        station = state.currentStation,
+                        isVisible = true,
+                        onEditClick = if (isFavorite) { { onEditStation(state.currentStation) } } else null,
+                        onCheckUpdate = onCheckUpdate
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(32.dp))
 
-        // Controls (Centered)
+        // Butoanele Playerului
         PlayerControls(
             playbackState = state.playbackState,
             isFavorite = isFavorite,
@@ -399,7 +414,7 @@ private fun PlayerPane(
 
         Spacer(Modifier.height(40.dp))
 
-        // RDS Ticker (Bottom, Larger)
+        // RDS-ul (la bază)
         RdsTicker(text = state.rdsInfo?.text, isAvailable = state.rdsInfo?.isAvailable == true)
     }
 }
