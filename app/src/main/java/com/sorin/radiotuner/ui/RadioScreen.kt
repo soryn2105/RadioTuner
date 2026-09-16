@@ -309,7 +309,7 @@ private fun PlayerPane(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // --- Grupul Principal (Badge + Text în stânga, Logo în dreapta) ---
+        // --- Grupul Principal (Logo în stânga, Badge + Text în dreapta) ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -317,7 +317,17 @@ private fun PlayerPane(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Coloana din stânga
+            // Logo+Cadran în stânga
+            Box(modifier = Modifier.size(170.dp)) {
+                TuningDial(
+                    isPlaying = isPlaying,
+                    imageUrl = state.currentStation?.imageUrl
+                )
+            }
+
+            Spacer(Modifier.width(20.dp))
+
+            // Coloana din dreapta
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.Start
@@ -372,16 +382,6 @@ private fun PlayerPane(
                         )
                     }
                 }
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            // Logo+Cadran în dreapta (dimensiune redusă pentru a încăpea)
-            Box(modifier = Modifier.size(170.dp)) {
-                TuningDial(
-                    isPlaying = isPlaying,
-                    imageUrl = state.currentStation?.imageUrl
-                )
             }
         }
 
