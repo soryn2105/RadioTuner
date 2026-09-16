@@ -16,9 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +37,10 @@ import com.sorin.radiotuner.ui.theme.*
 import com.sorin.radiotuner.ui.viewmodel.RadioUiState
 import com.sorin.radiotuner.ui.viewmodel.RadioViewModel
 import com.sorin.radiotuner.ui.viewmodel.RadioViewModelFactory
+import com.sorin.radiotuner.update.UpdateChecker
+import com.sorin.radiotuner.update.UpdateInfo
+import com.sorin.radiotuner.update.UpdateInstaller
+import kotlinx.coroutines.launch
 
 /**
  * (RO)
@@ -44,21 +50,22 @@ import com.sorin.radiotuner.ui.viewmodel.RadioViewModelFactory
 fun RadioScreen(factory: RadioViewModelFactory) {
     val viewModel: RadioViewModel = viewModel(factory = factory)
     val state by viewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    var showAboutDialog by remember { mutableStateOf(false) }
     var showManualStationDialog by remember { mutableStateOf(false) }
     var stationToEdit by remember { mutableStateOf<Station?>(null) }
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
 
     Box(modifier = Modifier.fillMaxSize().background(Graphite900)) {
         Column(modifier = Modifier.fillMaxSize()) {
             AppHeader(
                 isOnline = state.isOnline,
                 showMenuButton = !isLandscape,
-                onMenuClick = { viewModel.toggleMenu(true) },
-                onAboutClick = { showAboutDialog = true }
+                onMenuClick = { viewModel.toggleMenu(true) }
             )
 
             if (isLandscape) {
@@ -88,6 +95,16 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                         state = state,
                         viewModel = viewModel,
                         onEditStation = { stationToEdit = it },
+                        onCheckUpdate = {
+                            scope.launch {
+                                val info = UpdateChecker.check(context)
+                                if (info != null) {
+                                    updateInfo = info
+                                } else {
+                                    Toast.makeText(context, "Aplicația este la zi.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -96,6 +113,16 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                     state = state,
                     viewModel = viewModel,
                     onEditStation = { stationToEdit = it },
+                    onCheckUpdate = {
+                        scope.launch {
+                            val info = UpdateChecker.check(context)
+                            if (info != null) {
+                                updateInfo = info
+                            } else {
+                                Toast.makeText(context, "Aplicația este la zi.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -158,25 +185,6 @@ fun RadioScreen(factory: RadioViewModelFactory) {
         }
     }
 
-    if (showAboutDialog) {
-        AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
-            title = { Text("Despre Aplicație", fontSize = 20.sp) },
-            text = {
-                Column {
-                    Text("Versiune: ${BuildConfig.VERSION_NAME}", fontSize = 16.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Dezvoltat de Sorin", fontSize = 16.sp)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) {
-                    Text("OK", fontSize = 16.sp)
-                }
-            }
-        )
-    }
-
     if (showManualStationDialog) {
         ManualStationDialog(
             onDismiss = { showManualStationDialog = false },
@@ -198,14 +206,34 @@ fun RadioScreen(factory: RadioViewModelFactory) {
             }
         )
     }
+
+    updateInfo?.let { info ->
+        AlertDialog(
+            onDismissRequest = { updateInfo = null },
+            title = { Text("Actualizare disponibilă") },
+            text = { Text("Versiunea ${info.version} este disponibilă. Vrei să o instalezi?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    UpdateInstaller.downloadAndInstall(context, info.apkUrl)
+                    updateInfo = null
+                }) {
+                    Text("Instalează")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { updateInfo = null }) {
+                    Text("Mai târziu")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun AppHeader(
     isOnline: Boolean,
     showMenuButton: Boolean,
-    onMenuClick: () -> Unit,
-    onAboutClick: () -> Unit
+    onMenuClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -231,9 +259,6 @@ private fun AppHeader(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onAboutClick) {
-                Icon(Icons.Default.Info, contentDescription = null, tint = Muted, modifier = Modifier.size(24.dp))
-            }
             Icon(
                 imageVector = if (isOnline) Icons.Default.Wifi else Icons.Default.WifiOff,
                 contentDescription = null,
@@ -255,6 +280,7 @@ private fun PlayerPane(
     state: RadioUiState,
     viewModel: RadioViewModel,
     onEditStation: (Station) -> Unit,
+    onCheckUpdate: () -> Unit,
     modifier: Modifier
 ) {
     val isPlaying = state.playbackState is PlaybackState.Playing
@@ -280,66 +306,73 @@ private fun PlayerPane(
             .padding(24.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
-        // (RO) Status Badge - separat de logo
-        Surface(
-            color = statusColor.copy(alpha = 0.12f),
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
-        ) {
-            Text(
-                text = statusLabel,
-                color = statusColor,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                fontFamily = FontFamily.Monospace
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        TuningDial(
-            isPlaying = isPlaying,
-            imageUrl = state.currentStation?.imageUrl
-        )
-
-        Spacer(Modifier.height(32.dp))
-
+        // --- Secțiunea de Sus: Logo + Status/Info ---
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            horizontalArrangement = Arrangement.Start
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
+            // Logo și Cadran mai mici
+            Box(modifier = Modifier.size(160.dp)) {
+                TuningDial(
+                    isPlaying = isPlaying,
+                    imageUrl = state.currentStation?.imageUrl
+                )
+            }
+
+            Spacer(Modifier.width(20.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                // Status Badge
+                Surface(
+                    color = statusColor.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        text = statusLabel,
+                        color = statusColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Nume și Categorie
                 Text(
                     text = state.currentStation?.name ?: "Niciun post selectat",
                     color = Cream,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 26.sp,
+                    fontSize = 22.sp,
                     maxLines = 2,
-                    textAlign = TextAlign.Center
+                    lineHeight = 26.sp
                 )
                 if (state.currentStation != null) {
                     Text(
-                        text = "${state.currentStation.genre} · ${state.currentStation.country}",
+                        text = state.currentStation.genre,
                         color = Muted,
-                        fontSize = 16.sp
+                        fontSize = 14.sp
                     )
                 }
-            }
-            
-            if (state.currentStation != null) {
-                IconButton(onClick = { showDetails = !showDetails }, modifier = Modifier.size(48.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = if (showDetails) Amber else Muted,
-                        modifier = Modifier.size(28.dp)
-                    )
+                
+                if (state.currentStation != null) {
+                    Spacer(Modifier.height(8.dp))
+                    IconButton(
+                        onClick = { showDetails = !showDetails },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (showDetails) Icons.Default.Info else Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = if (showDetails) Amber else Muted,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -349,7 +382,8 @@ private fun PlayerPane(
             StationDetails(
                 station = state.currentStation,
                 isVisible = showDetails,
-                onEditClick = if (isFavorite) { { onEditStation(state.currentStation) } } else null
+                onEditClick = if (isFavorite) { { onEditStation(state.currentStation) } } else null,
+                onCheckUpdate = onCheckUpdate
             )
         }
 

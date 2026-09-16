@@ -11,34 +11,32 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sorin.radiotuner.BuildConfig
 import com.sorin.radiotuner.data.model.Station
 import com.sorin.radiotuner.ui.theme.*
 
 /**
  * (RO)
- * Afișează informații detaliate despre postul selectat: site web, URL flux, bitrate.
- * Include funcție de copiere pentru adresa de stream.
+ * Afișează informații detaliate unificate: datele postului + datele aplicației.
+ * Include funcții de copiere, editare și verificare actualizări.
  */
 @Composable
 fun StationDetails(
     station: Station,
     isVisible: Boolean,
     onEditClick: (() -> Unit)? = null,
+    onCheckUpdate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -53,15 +51,17 @@ fun StationDetails(
                 .fillMaxWidth()
                 .background(Graphite800.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // --- Secțiunea Post Radio ---
+            Text("DETALII POST", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Amber.copy(alpha = 0.7f))
+            
             InfoRow(
                 icon = Icons.Default.Language,
                 label = "Site Web",
                 value = station.homepage ?: "Nespecificat"
             )
             
-            // Adresă Flux cu butoane de copiere și editare
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.weight(1f)) {
                     InfoRow(
@@ -73,16 +73,8 @@ fun StationDetails(
                 
                 Row {
                     if (onEditClick != null) {
-                        IconButton(
-                            onClick = onEditClick,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit",
-                                tint = Amber,
-                                modifier = Modifier.size(20.dp)
-                            )
+                        IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Amber, modifier = Modifier.size(18.dp))
                         }
                     }
 
@@ -91,13 +83,13 @@ fun StationDetails(
                             copyToClipboard(context, station.streamUrl)
                             Toast.makeText(context, "Link copiat!", Toast.LENGTH_SHORT).show()
                         },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = "Copy",
                             tint = Amber.copy(alpha = 0.8f),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -108,6 +100,38 @@ fun StationDetails(
                 label = "Calitate",
                 value = if (station.bitrate != null && station.bitrate > 0) "${station.bitrate} kbps" else "Necunoscută"
             )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+
+            // --- Secțiunea Aplicație & Dezvoltator ---
+            Text("DESPRE APLICAȚIE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Amber.copy(alpha = 0.7f))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    InfoRow(
+                        icon = Icons.Default.Info,
+                        label = "Versiune Instalată",
+                        value = BuildConfig.VERSION_NAME
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    InfoRow(
+                        icon = Icons.Default.Person,
+                        label = "Dezvoltator",
+                        value = "Sorin"
+                    )
+                }
+                
+                Button(
+                    onClick = onCheckUpdate,
+                    colors = ButtonDefaults.buttonColors(containerColor = Graphite700),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Update, contentDescription = null, modifier = Modifier.size(16.dp), tint = Amber)
+                    Spacer(Modifier.width(6.dp))
+                    Text("UPDATE", fontSize = 11.sp, color = Cream)
+                }
+            }
         }
     }
 }
@@ -122,15 +146,15 @@ private fun InfoRow(icon: ImageVector, label: String, value: String) {
             imageVector = icon,
             contentDescription = null,
             tint = Amber,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(18.dp)
         )
         Column {
-            Text(label, fontSize = 12.sp, color = Muted)
+            Text(label, fontSize = 11.sp, color = Muted)
             Text(
                 text = value,
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 color = Cream,
-                maxLines = 3
+                maxLines = 2
             )
         }
     }
