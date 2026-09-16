@@ -4,7 +4,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,18 +25,7 @@ import com.sorin.radiotuner.ui.theme.LedGreen
 
 /**
  * (RO)
- * Afișajul "RDS" — de fapt metadata ICY a stream-ului,
- * prezentată ca un mic ecran LED de tip matrice de puncte, cu text derulant.
- *
- * Modifier.basicMarquee() e o funcție nativă Compose (foundation)
- * care face exact derularea automată a textului dacă nu încape - nu mai trebuie animație scrisă manual.
- *
- * (EN)
- * The "RDS" display — actually the ICY metadata of the stream,
- * presented as a small LED matrix screen, with scrolling text.
- *
- * Modifier.basicMarquee() is a native Compose (foundation) function
- * that automatically scrolls the text if it does not fit - no manual animation is required.
+ * Afișajul "RDS" — de fapt metadata ICY a stream-ului.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -42,22 +33,22 @@ fun RdsTicker(text: String?, isAvailable: Boolean) {
     Column {
         Text(
             text = stringResource(R.string.rds_label),
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             color = Amber,
             fontFamily = FontFamily.Monospace
         )
-        androidx.compose.foundation.layout.Spacer(Modifier.padding(top = 4.dp))
-        androidx.compose.foundation.layout.Box(
+        Spacer(Modifier.padding(top = 6.dp))
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF0D1210), RoundedCornerShape(6.dp))
-                .border(1.dp, Color(0xFF33363A), RoundedCornerShape(6.dp))
-                .padding(vertical = 10.dp, horizontal = 14.dp)
+                .background(Color(0xFF0D1210), RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFF33363A), RoundedCornerShape(8.dp))
+                .padding(vertical = 12.dp, horizontal = 16.dp)
         ) {
             Text(
-                text = if (isAvailable && ! text.isNullOrBlank()) text else stringResource(R.string.rds_stopped),
+                text = if (isAvailable && !text.isNullOrBlank()) text else stringResource(R.string.rds_stopped),
                 fontFamily = FontFamily.Monospace,
-                fontSize = 17.sp,
+                fontSize = 22.sp,
                 color = LedGreen,
                 maxLines = 1,
                 modifier = Modifier.basicMarquee()

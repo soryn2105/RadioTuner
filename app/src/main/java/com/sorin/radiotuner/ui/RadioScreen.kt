@@ -153,7 +153,7 @@ fun RadioScreen(factory: RadioViewModelFactory) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("MENIU", color = Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text("MENIU", color = Cream, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                             IconButton(onClick = { viewModel.toggleMenu(false) }) {
                                 Icon(Icons.Default.Close, contentDescription = null, tint = Cream)
                             }
@@ -238,7 +238,7 @@ private fun AppHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -248,13 +248,13 @@ private fun AppHeader(
                     Icon(Icons.Default.Menu, contentDescription = null, tint = Cream)
                 }
             }
-            Icon(Icons.Default.Radio, contentDescription = null, tint = Amber, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Default.Radio, contentDescription = null, tint = Amber, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.width(10.dp))
             Text(
                 "AMBER TUNER",
                 color = Cream,
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
+                fontSize = 22.sp
             )
         }
 
@@ -263,12 +263,12 @@ private fun AppHeader(
                 imageVector = if (isOnline) Icons.Default.Wifi else Icons.Default.WifiOff,
                 contentDescription = null,
                 tint = if (isOnline) LedGreen else HeartRed,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(6.dp))
             Text(
                 text = if (isOnline) "ONLINE" else "OFFLINE",
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 color = Muted
             )
         }
@@ -304,76 +304,74 @@ private fun PlayerPane(
     Column(
         modifier = modifier
             .padding(24.dp)
+            .fillMaxSize()
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
+        verticalArrangement = Arrangement.Center
     ) {
-        // --- Secțiunea de Sus: Logo + Status/Info ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
+        // Status Badge (Centered)
+        Surface(
+            color = statusColor.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, statusColor.copy(alpha = 0.6f))
         ) {
-            // Logo și Cadran mai mici
-            Box(modifier = Modifier.size(160.dp)) {
-                TuningDial(
-                    isPlaying = isPlaying,
-                    imageUrl = state.currentStation?.imageUrl
+            Text(
+                text = statusLabel,
+                color = statusColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        // Dial & Logo (Centered, Larger)
+        Box(modifier = Modifier.size(240.dp)) {
+            TuningDial(
+                isPlaying = isPlaying,
+                imageUrl = state.currentStation?.imageUrl
+            )
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        // Station Name (Centered, Much Larger)
+        Text(
+            text = state.currentStation?.name ?: "Niciun post selectat",
+            color = Cream,
+            fontWeight = FontWeight.Bold,
+            fontSize = 32.sp,
+            maxLines = 2,
+            textAlign = TextAlign.Center,
+            lineHeight = 38.sp,
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        if (state.currentStation != null) {
+            // Genre (Centered, Larger)
+            Text(
+                text = "${state.currentStation.genre} · ${state.currentStation.country}",
+                color = Muted,
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(Modifier.height(12.dp))
+            
+            // Info Button (Centered)
+            IconButton(
+                onClick = { showDetails = !showDetails },
+                modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Info",
+                    tint = if (showDetails) Amber else Muted,
+                    modifier = Modifier.size(32.dp)
                 )
-            }
-
-            Spacer(Modifier.width(20.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                // Status Badge
-                Surface(
-                    color = statusColor.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
-                ) {
-                    Text(
-                        text = statusLabel,
-                        color = statusColor,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                // Nume și Categorie
-                Text(
-                    text = state.currentStation?.name ?: "Niciun post selectat",
-                    color = Cream,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    maxLines = 2,
-                    lineHeight = 26.sp
-                )
-                if (state.currentStation != null) {
-                    Text(
-                        text = state.currentStation.genre,
-                        color = Muted,
-                        fontSize = 14.sp
-                    )
-                }
-                
-                if (state.currentStation != null) {
-                    Spacer(Modifier.height(8.dp))
-                    IconButton(
-                        onClick = { showDetails = !showDetails },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (showDetails) Icons.Default.Info else Icons.Default.Info,
-                            contentDescription = "Info",
-                            tint = if (showDetails) Amber else Muted,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
             }
         }
 
@@ -387,8 +385,9 @@ private fun PlayerPane(
             )
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(32.dp))
 
+        // Controls (Centered)
         PlayerControls(
             playbackState = state.playbackState,
             isFavorite = isFavorite,
@@ -398,8 +397,9 @@ private fun PlayerPane(
             onToggleFavorite = { state.currentStation?.let(viewModel::toggleFavorite) }
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(40.dp))
 
+        // RDS Ticker (Bottom, Larger)
         RdsTicker(text = state.rdsInfo?.text, isAvailable = state.rdsInfo?.isAvailable == true)
     }
 }
