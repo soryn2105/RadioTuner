@@ -1,0 +1,40 @@
+================================================================================
+DOCUMENTATIE TEHNICA - REMEDIERI RDS SI INCADRARE DISPLAY (AMBER TUNER)
+================================================================================
+
+1. REMEDIEREA SISTEMULUI RDS (ExoRadioPlayer.kt)
+--------------------------------------------------------------------------------
+- Problema initiala: La unele posturi radio online (ex. Kiss FM, ZU, Digi FM),
+  informatiile RDS (Artist - Melodie) functionau la pornire sau cateva minute,
+  dupa care dispareau definitiv sau nu mai reveneau dupa prima oprire.
+- Cauza tehnica: Serverele de streaming trimit periodic pachete de metadate
+  (keep-alive / ping) continand doar numele postului sau titluri goale. Acestea
+  suprscriau titlul dinamic al melodiei. In plus, biblioteca Media3/ExoPlayer
+  deduplica metadatele identice, blocand declansarea evenimentului onMediaMetadataChanged
+  pentru melodii noi.
+- Solutia implementata:
+  * Am introdus variabila de stare `currentDynamicRds` in `ExoRadioPlayer.kt`.
+  * Cand se primeste un titlu valid de melodie (diferit de numele postului),
+    acesta este salvat si afisat permanent.
+  * Cand sosesc pachete de metadate fara titlu de melodie (sau doar cu numele postului),
+    sistemul pastreaza ultimul RDS dinamic cunoscut in loc sa il suprscrie.
+  * La oprire (`stop()`) sau la schimbarea postului (`play()`), starile se reseteaza
+    corect pentru a asigura sincronizarea.
+
+2. INCADRAREA PLAYER-ULUI IN DISPLAY SI CEAS DIGITAL (RadioScreen.kt)
+--------------------------------------------------------------------------------
+- Cerinta utilizatorului: Player-ul sa fie incadrat in display astfel incat sa fie
+  incadrat intre elementele display-ului (exemplu ceas, wifi, network).
+- Solutia implementata:
+  * Ceas digital în timp real: Am adaugat un ceas digital (`HH:mm`) actualizat secundă
+    cu secundă in header-ul aplicatiei (`AppHeader`), pozitionat alaturi de iconul
+    de ceas si indicatorul de rețea/WiFi (`ONLINE`/`OFFLINE`).
+  * Panou display radio (UI Framing): Am adaugat un container de tip `Surface`
+    stilizat ca panou de aparat radio clasic/modern (fundal grafit închis, bordură
+    subțire de accent în tonuri de chihlimbar, colțuri rotunjite și umbră ridicată),
+    incadrand perfect player-ul, cadranul rotativ, butoanele de control si ticker-ul
+    RDS intre elementele superioare ale display-ului.
+
+================================================================================
+Dezvoltat pentru RadioTuner / Amber Tuner.
+================================================================================

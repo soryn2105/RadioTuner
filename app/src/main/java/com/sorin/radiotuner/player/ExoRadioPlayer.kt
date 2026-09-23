@@ -3,11 +3,13 @@ package com.sorin.radiotuner.player
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.metadata.icy.IcyInfo
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -36,6 +38,7 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
     override val rdsInfo: StateFlow<RdsInfo?> = _rdsInfo.asStateFlow()
     
     private var currentStation: Station? = null
+    private var currentDynamicRds: String? = null
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(state: Int) {
@@ -62,6 +65,7 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
             )
         }
 
+        @OptIn(UnstableApi::class)
         override fun onMetadata(metadata: Metadata) {
             // (RO) Suport direct pentru ICY (Shoutcast) - foarte important pentru Kiss/ZU/Digi
             for (i in 0 until metadata.length()) {
@@ -96,11 +100,17 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
             } else {
                 dynamicInfo
             }
+            currentDynamicRds = finalRds
             _rdsInfo.value = RdsInfo(text = finalRds, isAvailable = true)
         } else {
-            // Dacă nu avem RDS nou, afișăm info despre post
-            currentStation?.let {
-                _rdsInfo.value = RdsInfo(text = "${it.name} (${it.genre})", isAvailable = true)
+            // Dacă nu avem RDS nou, păstrăm ultimul RDS dinamic dacă există,
+            // prevenind suprscrierea cu numele postului de către pachetele periodice de mentenanță.
+            if (currentDynamicRds != null) {
+                _rdsInfo.value = RdsInfo(text = currentDynamicRds!!, isAvailable = true)
+            } else {
+                currentStation?.let {
+                    _rdsInfo.value = RdsInfo(text = "${it.name} (${it.genre})", isAvailable = true)
+                }
             }
         }
     }
@@ -115,6 +125,7 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
 
     override fun play(station: Station) {
         currentStation = station
+        currentDynamicRds = null
         // Info inițial (până vine RDS-ul)
         _rdsInfo.value = RdsInfo(text = "${station.name} (${station.genre})", isAvailable = true)
         
@@ -150,6 +161,7 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
         player.clearMediaItems()
         _playbackState.value = PlaybackState.Idle
         _rdsInfo.value = null
+        currentDynamicRds = null
         currentStation = null
     }
 
