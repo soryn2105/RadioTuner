@@ -81,21 +81,22 @@ class ExoRadioPlayer(private val context: Context) : RadioPlayer {
     }
 
     private fun updateRdsText(title: String?, artist: String?, displayTitle: String?) {
-        val stationName = currentStation?.name?.lowercase() ?: ""
-        
         // (RO) Încercăm să găsim cea mai bună informație dinamică
         val candidates = listOfNotNull(title, artist, displayTitle)
             .map { it.trim() }
             .filter { it.isNotEmpty() }
 
-        // Căutăm un text care nu este doar numele postului
+        // Căutăm un text care nu este un placeholder generic
         val dynamicInfo = candidates.firstOrNull { 
-            it.lowercase() != stationName && !it.lowercase().contains("stream title")
+            val lower = it.lowercase()
+            !lower.contains("stream title") && 
+            !lower.contains("icecast") && 
+            !lower.contains("shoutcast")
         }
 
         if (dynamicInfo != null) {
             // Dacă avem artist și titlu separat, le combinăm
-            val finalRds = if (!artist.isNullOrBlank() && !title.isNullOrBlank() && title.lowercase() != stationName) {
+            val finalRds = if (!artist.isNullOrBlank() && !title.isNullOrBlank()) {
                 "$artist - $title"
             } else {
                 dynamicInfo

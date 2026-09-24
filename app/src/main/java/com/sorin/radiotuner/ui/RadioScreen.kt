@@ -66,11 +66,7 @@ fun RadioScreen(factory: RadioViewModelFactory) {
 
     Box(modifier = Modifier.fillMaxSize().background(Graphite900)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AppHeader(
-                isOnline = state.isOnline,
-                showMenuButton = !isLandscape,
-                onMenuClick = { viewModel.toggleMenu(true) }
-            )
+            AppHeader()
 
             if (isLandscape) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -247,66 +243,13 @@ private fun rememberCurrentTime(): String {
 }
 
 @Composable
-private fun AppHeader(
-    isOnline: Boolean,
-    showMenuButton: Boolean,
-    onMenuClick: () -> Unit
-) {
-    val currentTime = rememberCurrentTime()
-
-    Row(
+private fun AppHeader() {
+    // Bara de sus goală (rămâne spațiul, dar fără elemente vizuale)
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (showMenuButton) {
-                IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.Menu, contentDescription = null, tint = Cream)
-                }
-            }
-            Icon(Icons.Default.Radio, contentDescription = null, tint = Amber, modifier = Modifier.size(28.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(
-                "AMBER TUNER",
-                color = Cream,
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp
-            )
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            // Ceas
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Schedule, contentDescription = null, tint = Amber, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = currentTime,
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = Cream
-                )
-            }
-
-            // Network / Wifi
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = if (isOnline) Icons.Default.Wifi else Icons.Default.WifiOff,
-                    contentDescription = null,
-                    tint = if (isOnline) LedGreen else HeartRed,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = if (isOnline) "ONLINE" else "OFFLINE",
-                    fontSize = 12.sp,
-                    color = Muted
-                )
-            }
-        }
-    }
+            .height(16.dp)
+    )
 }
 
 @Composable
@@ -317,9 +260,13 @@ private fun PlayerPane(
     onCheckUpdate: () -> Unit,
     modifier: Modifier
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isPlaying = state.playbackState is PlaybackState.Playing
     val isFavorite = state.currentStation?.let { current -> state.favoriteStations.any { it.id == current.id } } ?: false
     var showDetails by remember { mutableStateOf(false) }
+    val currentTime = rememberCurrentTime()
+    val isOnline = state.isOnline
 
     val statusLabel = when (state.playbackState) {
         is PlaybackState.Playing -> "ON AIR"
@@ -352,7 +299,67 @@ private fun PlayerPane(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // --- Grupul Principal (Logo în stânga, Badge + Text în dreapta) ---
+            // --- Bara creată în interiorul frame-ului playerului ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (!isLandscape) {
+                        IconButton(
+                            onClick = { viewModel.toggleMenu(true) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.Menu, contentDescription = null, tint = Cream, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    Icon(Icons.Default.Radio, contentDescription = null, tint = Amber, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "AMBER TUNER",
+                        color = Cream,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Ceas
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = Amber, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = currentTime,
+                            fontSize = 13.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Cream
+                        )
+                    }
+
+                    // Network / Wifi
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (isOnline) Icons.Default.Wifi else Icons.Default.WifiOff,
+                            contentDescription = null,
+                            tint = if (isOnline) LedGreen else HeartRed,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = if (isOnline) "ONLINE" else "OFFLINE",
+                            fontSize = 11.sp,
+                            color = Muted
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+            Spacer(Modifier.height(16.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
