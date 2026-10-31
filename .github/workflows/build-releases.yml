@@ -1,0 +1,100 @@
+name: Build and Release (Android & iOS)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ==========================================
+  # 1. COMPILARE ANDROID (Rulează pe Linux)
+  # ==========================================
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Android Release APK
+        run: ./gradlew :app:assembleRelease -PversionName=${{ github.ref_name }} -PversionCode=${{ github.run_number }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app/build/outputs/apk/release/*.apk
+
+  # ==========================================
+  # 2. COMPILARE iOS (Rulează gratuit pe macOS)
+  # ==========================================
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build iOS Shared Framework
+        run: ./gradlew :shared:linkReleaseFrameworkIosArm64
+
+      - name: Package iOS App (.ipa)
+        run: |
+          mkdir -p build-ios/Payload
+          mkdir -p build-ios/Payload/AmberTuner.app
+          cp -R shared/build/bin/iosArm64/releaseFramework/SharedApp.framework build-ios/Payload/AmberTuner.app/
+          cp iosApp/iosApp/Info.plist build-ios/Payload/AmberTuner.app/
+          cd build-ios
+          zip -r AmberTuner.ipa Payload
+          cd ..
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-ipa
+          path: build-ios/AmberTuner.ipa
+
+  # ==========================================
+  # 3. PUBLICARE RELEASES (GitHub Releases + Gitea)
+  # ==========================================
+  publish-releases:
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-apk
+          path: release-artifacts/
+
+      - name: Download IPA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-ipa
+          path: release-artifacts/
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: release-artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

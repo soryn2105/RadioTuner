@@ -23,4 +23,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "RadioTuner"
+include(":shared")
 include(":app")
