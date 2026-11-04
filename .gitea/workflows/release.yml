@@ -35,7 +35,7 @@ jobs:
         env:
           GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          RESPONSE=$(curl -s -X POST \
+          RESPONSE=$(curl -s --fail-with-body -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"tag_name\": \"${{ github.ref_name }}\", \"name\": \"${{ github.ref_name }}\"}" \
@@ -48,7 +48,7 @@ jobs:
         env:
           GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          curl -s -X POST \
+          curl -s --fail-with-body -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -F "attachment=@app/build/outputs/apk/release/app-release-unsigned-signed.apk;filename=app-release.apk" \
             "http://gitea:3000/api/v1/repos/tiky/RadioTuner/releases/${{ steps.create_release.outputs.release_id }}/assets"
