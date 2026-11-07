@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Fisiere IDE care difera intre calculatoare
+/.idea/deploymentTargetSelector.xml
+/.idea/misc.xml
+/.idea/jsonSchemas.xml
+/.idea/gradle.xml
